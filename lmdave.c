@@ -9,9 +9,10 @@ game_assets_t* g_assets = NULL;
 void init_game() {
 	gs->quit = 1;
 	gs->current_level = 1;
+	gs->levels = GetLevels();
 }
 
-// initialize assets
+// initialize game assets
 void init_assets( SDL_Renderer* r ) {
 }
 
@@ -31,6 +32,10 @@ void render( SDL_Renderer* r ) {
 const uint8_t R_SCALE = 3;
 
 int main( int argc, char** argv ) {
+	// initialize resources from DAVE.EXE
+	LoadTiles();
+	LoadLevels();
+
 	gs = malloc( sizeof(game_state_t) );
 	init_game();
 
@@ -40,6 +45,8 @@ int main( int argc, char** argv ) {
 
 	g_assets = malloc( sizeof(game_assets_t) );
 	init_assets( renderer );
+	// tile surfaces should be converted as textures inside g_assets now
+	FreeTileSurfaces();
 
 	// main loop
 	while ( !gs->quit ) {

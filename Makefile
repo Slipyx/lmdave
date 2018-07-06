@@ -25,6 +25,7 @@ LDFLAGS_g := -s
 OBJDIR_g := obj
 
 SRCS := $(wildcard *.c)
+SRCS += $(wildcard util/*.c)
 OBJS_t := $(SRCS:.c=.o)
 
 # include dirs

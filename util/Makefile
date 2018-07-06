@@ -28,7 +28,7 @@ OBJDIR_g := obj
 OBJS_t := tiles.o levels.o
 
 # include dirs
-CFLAGS_g +=
+CFLAGS_g += -DUTIL_BIN
 
 # libs
 ifdef ISWIN
@@ -40,9 +40,9 @@ endif
 
 # binary target
 ifdef ISWIN
-	TARG_t := tiles.exe
+	TARG_t := util.exe
 else
-	TARG_t := tiles
+	TARG_t := util
 endif
 
 utils: $(TARG_t)

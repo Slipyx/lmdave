@@ -2,44 +2,36 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-#include <SDL.h>
+#include "util.h"
 
 // all tiles in the exe
-SDL_Surface* tile_sfc[158];
-//SDL_Texture* tile_tx[158];
-
-// level info
-void LoadLevels();
-void SaveLevels();
-void CreateWorldMap();
+static SDL_Surface* tile_sfc[NUM_EXE_TILES];
 
 // export all tiles to bmp
 void SaveTiles() {
 	// Save out the all tile surfaces
-	for ( int curtil = 0; curtil < 158; ++curtil ) {
+	for ( int curtil = 0; curtil < NUM_EXE_TILES; ++curtil ) {
 		SDL_Surface* sfc = tile_sfc[curtil];
 		printf( "Saving tile%03d.bmp (%ux%u)...\n", curtil, sfc->w, sfc->h );
 		char fname[1024];
-		snprintf( fname, 1024, "../tiles/tile%03d.bmp", curtil );
+		snprintf( fname, 1024, "./tiles/tile%03d.bmp", curtil );
 		SDL_SaveBMP( sfc, fname );
 	}
 }
 
-// convert all loaded tile surfaces to textures
-/*void ConvertTiles( SDL_Renderer* r ) {
-	for ( int i = 0; i < 158; ++i ) {
-		tile_tx[i] = SDL_CreateTextureFromSurface( r, tile_sfc[i] );
-		SDL_FreeSurface( tile_sfc[i] );
-	}
-}*/
+// return tile surface array for external use
+SDL_Surface** GetTileSurfaces() {
+	return tile_sfc;
+}
 
 // fill global tile array with tiles from exe
 void LoadTiles() {
 	const uint32_t vga_data_addr = 0x120f0;
 	const uint32_t vga_pal_addr = 0x26b0a;
 	// exe assumed uncompressed
-	SDL_RWops* ddexe = SDL_RWFromFile( "../DAVE.EXE", "rb" );
+	SDL_RWops* ddexe = SDL_RWFromFile( "DAVE.EXE", "rb" );
 	if ( ddexe != NULL ) printf( "SUCCESS! (%"PRIi64" bytes)\n", SDL_RWsize( ddexe ) );
+	else { fprintf( stderr, "Error opening DAVE.EXE for tiles!\n" ); exit( EXIT_FAILURE ); }
 
 	// tileset
 	SDL_RWseek( ddexe, vga_data_addr, RW_SEEK_SET );
@@ -152,11 +144,12 @@ void LoadTiles() {
 
 // free all loaded exe's tile surfaces
 void FreeTileSurfaces() {
-	for ( int i = 0; i < 158; ++i ) {
+	for ( int i = 0; i < NUM_EXE_TILES; ++i ) {
 		SDL_FreeSurface( tile_sfc[i] );
 	}
 }
 
+#ifdef UTIL_BIN
 int main( int argc, char** argv ) {
 	// high scores
 	SDL_RWops* dscor = SDL_RWFromFile( "../DSCORES.DAV", "rb" );
@@ -168,16 +161,16 @@ int main( int argc, char** argv ) {
 	SDL_RWclose( dscor );
 
 	LoadTiles();
-	//SaveTiles();
-	//ConvertTiles();
+	SaveTiles();
 
 	// LEVELS
 	LoadLevels();
-	//SaveLevels();
+	SaveLevels();
 	CreateWorldMap();
 
 	FreeTileSurfaces();
 
 	return 0;
 }
+#endif
 
