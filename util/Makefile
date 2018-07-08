@@ -32,7 +32,9 @@ CFLAGS_g += -DUTIL_BIN
 
 # libs
 ifdef ISWIN
-	LDFLAGS_g += 
+	LDFLAGS_g += -L../../SDL2-2.0.8/lib \
+		-lmingw32 -lSDL2main -lSDL2 -mconsole
+	CFLAGS_g += -I../../SDL2-2.0.8/include
 else
 	CFLAGS_g += -I/usr/include/SDL2
 	LDFLAGS_g += -lSDL2

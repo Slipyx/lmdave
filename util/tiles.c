@@ -1,6 +1,7 @@
 // extract tilesxxx.bmp from uncompressed DAVE.EXE
 #include <stdint.h>
 #include <inttypes.h>
+#include <stdio.h>
 
 #include "util.h"
 

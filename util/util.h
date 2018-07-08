@@ -20,7 +20,7 @@ void FreeTileSurfaces();
 // byte[24] unsed padding
 // note: player start and monster starts are hardcoded
 typedef struct {
-	int8_t path[256];
+	uint8_t path[256];
 	uint8_t tiles[1000];
 	uint8_t pad[24];
 } level_t;
@@ -32,4 +32,3 @@ void SaveLevels();
 void CreateWorldMap();
 
 #endif
-

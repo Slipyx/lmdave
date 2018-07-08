@@ -33,7 +33,9 @@ CFLAGS_g +=
 
 # libs
 ifdef ISWIN
-	LDFLAGS_g += 
+	CFLAGS_g += -I../SDL2-2.0.8/include
+	LDFLAGS_g += -L../SDL2-2.0.8/lib \
+		-lmingw32 -lSDL2main -lSDL2 -lopengl32 -mconsole
 else
 	CFLAGS_g += -I/usr/include/SDL2
 	LDFLAGS_g += -lSDL2

@@ -10,9 +10,11 @@
 typedef struct {
 	uint8_t quit;
 	uint8_t current_level;
+	// view and scroll are per tile
 	uint8_t view_x, view_y;
+	int8_t scroll_x;
 
-	level_t* levels; // grabbed from util
+	level_t* levels; // grabbed from util, NUM_EXE_LEVELS count
 } game_state_t;
 
 // game assets
@@ -22,4 +24,3 @@ typedef struct {
 } game_assets_t;
 
 #endif
-
