@@ -14,10 +14,13 @@ void init_game() {
 	gs->scroll_x = 0;
 
 	// dave state at level 1;
+	memset( &gs->ds, 0, sizeof(dave_state_t) );
 	gs->ds.tx = 2;
 	gs->ds.ty = 8;
 	gs->ds.px = gs->ds.tx * TILE_SIZE;
 	gs->ds.py = gs->ds.ty * TILE_SIZE;
+	gs->ds.jump_timer = 0;
+	gs->ds.on_ground = 1;
 
 	// returns array of NUM_EXE_LEVELS that was loaded by the util lib
 	gs->levels = GetLevels();
@@ -30,7 +33,13 @@ void init_assets( SDL_Renderer* r ) {
 
 	// convert each surface from util's array to g_asset texture array
 	for ( int i = 0; i < NUM_EXE_TILES; ++i ) {
-		g_assets->tile_tx[i] = SDL_CreateTextureFromSurface( r, tileSfcs[i] );
+		// mask dave sprites
+		if ( (i >= 53 && i <= 59) || (i >= 67 && i <= 68)
+			 || (i >= 71 && i <= 73) || (i >= 77 && i <= 82) ) {
+			SDL_SetColorKey( tileSfcs[i], 1, SDL_MapRGB( tileSfcs[i]->format, 0, 0, 0 ) );
+			g_assets->tile_tx[i] = SDL_CreateTextureFromSurface( r, tileSfcs[i] );
+		} else
+			g_assets->tile_tx[i] = SDL_CreateTextureFromSurface( r, tileSfcs[i] );
 	}
 }
 
@@ -56,11 +65,6 @@ void check_input() {
 		SDL_Keycode key = ev.key.keysym.sym;
 		// android back
 		if ( key == SDLK_AC_BACK ) gs->quit = 1;
-
-		/*if ( key == SDLK_RIGHT ) gs->scroll_x = 15;
-		if ( key == SDLK_LEFT ) gs->scroll_x = -15;
-		if ( key == SDLK_DOWN ) gs->current_level++;
-		if ( key == SDLK_UP ) gs->current_level--;*/
 	}
 	} // switch
 }
@@ -70,6 +74,20 @@ void clear_input() {
 	gs->ds.try_left = 0;
 	gs->ds.try_right = 0;
 	gs->ds.try_jump = 0;
+}
+
+// remove item from world
+void pickup_item( uint8_t tx, uint8_t ty ) {
+	if ( !tx || !ty ) return;
+
+	uint8_t til = gs->levels[gs->current_level].tiles[ty * 100 + tx];
+	// pickup functionality here
+	(void)til;
+
+	// remove
+	gs->levels[gs->current_level].tiles[ty * 100 + tx] = 0;
+	gs->ds.check_pickup_x = 0;
+	gs->ds.check_pickup_y = 0;
 }
 
 // returns 1 if passed pixel point is not within a solid tile
@@ -87,6 +105,12 @@ uint8_t is_clear( uint16_t px, uint16_t py ) {
 	if ( til >= 15 && til <= 19 ) return 0;
 	if ( til >= 21 && til <= 24 ) return 0;
 	if ( til >= 29 && til <= 30 ) return 0;
+
+	// pickups
+	if ( til == 10 || (til >= 47 && til <= 52) ) {
+		gs->ds.check_pickup_x = tx;
+		gs->ds.check_pickup_y = ty;
+	}
 
 	return 1;
 }
@@ -106,8 +130,8 @@ void check_collision() {
 	// 6, 7 = left edge
 	gs->ds.col_point[6] = is_clear( gs->ds.px + 3, gs->ds.py + 12 );
 	gs->ds.col_point[7] = is_clear( gs->ds.px + 3, gs->ds.py + 4 );
-	// update on_ground flag if bottom edge points (4,5) are not clear
-	gs->ds.on_ground = (!gs->ds.col_point[4] && !gs->ds.col_point[5]);
+	// update on_ground flag if a bottom point (4,5) is not clear
+	gs->ds.on_ground = (!gs->ds.col_point[4] || !gs->ds.col_point[5]);
 }
 
 // validate input whose try flags were set
@@ -121,22 +145,56 @@ void verify_input() {
 		gs->ds.do_left = 1;
 	}
 	// jump; on_ground and col points 0, 1
-	if ( gs->ds.try_jump && gs->ds.on_ground && gs->ds.col_point[0] && gs->ds.col_point[1] ) {
+	if ( gs->ds.try_jump && gs->ds.on_ground && !gs->ds.do_jump
+		 && (gs->ds.col_point[0] && gs->ds.col_point[1]) ) {
 		gs->ds.do_jump = 1;
 	}
 }
 
 // apply validated dave movement
 void move_dave() {
+	// update dave's tile pos
+	gs->ds.tx = gs->ds.px / TILE_SIZE;
+	gs->ds.ty = gs->ds.py / TILE_SIZE;
+
 	if ( gs->ds.do_right ) {
-		gs->ds.px += 1;
+		gs->ds.px += 2;
 		gs->ds.do_right = 0;
 	}
 	if ( gs->ds.do_left ) {
-		gs->ds.px -= 1;
+		gs->ds.px -= 2;
 		gs->ds.do_left = 0;
 	}
 	if ( gs->ds.do_jump ) {
+		if ( !gs->ds.jump_timer )
+			gs->ds.jump_timer = 20;
+
+		if ( gs->ds.col_point[0] || gs->ds.col_point[1] ) {
+			if ( gs->ds.jump_timer > 5 ) gs->ds.py -= 2;
+			else gs->ds.py -= 1;
+			gs->ds.jump_timer--;
+		} else {
+			gs->ds.jump_timer = 0;
+		}
+
+		if ( !gs->ds.jump_timer )
+			gs->ds.do_jump = 0;
+	}
+}
+
+// apply gravity to dave
+void apply_gravity() {
+	if ( !gs->ds.do_jump && !gs->ds.on_ground ) {
+		// check below sprite
+		if ( is_clear( gs->ds.px + 4, gs->ds.py + 17 ) )
+			gs->ds.py += 2;
+		else { // align to tile
+			uint8_t not_align = gs->ds.py % TILE_SIZE;
+			if ( not_align ) {
+				gs->ds.py = not_align < (TILE_SIZE / 2) ?
+					gs->ds.py - not_align : gs->ds.py + TILE_SIZE - not_align;
+			}
+		}
 	}
 }
 
@@ -160,12 +218,15 @@ void update_game() {
 
 	// update collision point flags
 	check_collision();
+	// pickups
+	pickup_item( gs->ds.check_pickup_x, gs->ds.check_pickup_y );
 	// verify input try flags
 	verify_input();
 	// apply dave movement
 	move_dave();
 	// game view scrolling
 	scroll_screen();
+	apply_gravity();
 	// reset input flags
 	clear_input();
 }
@@ -194,12 +255,21 @@ void draw_dave( SDL_Renderer* r ) {
 	dst.w = 20; dst.h = 16;
 
 	// render
+	/*if ( gs->ds.on_ground ) {
+		SDL_SetRenderDrawColor( r, 255, 0, 255, 255 );
+		SDL_RenderDrawRect( r, &dst );
+	}
+	if ( gs->ds.jump_timer ) {
+		SDL_SetRenderDrawColor( r, 0, 255, 255, 255 );
+		SDL_RenderDrawRect( r, &(SDL_Rect){dst.x-16,dst.y-16,16,16} );
+	}*/
 	SDL_RenderCopy( r, g_assets->tile_tx[56], NULL, &dst );
 }
 
 // draw to renderer
 void render( SDL_Renderer* r ) {
 	// clear backbuffer
+	SDL_SetRenderDrawColor( r, 0, 40, 80, 0xff );
 	SDL_RenderClear( r );
 
 	draw_world( r );
@@ -269,8 +339,8 @@ int main( int argc, char** argv ) {
 		render( renderer );
 
 		//uint32_t et = SDL_GetTicks();
-		uint32_t delay = 16 - (SDL_GetTicks() - st);
-		delay = delay > 16 ? 0 : delay;
+		uint32_t delay = 33 - (SDL_GetTicks() - st);
+		delay = delay > 33 ? 0 : delay;
 		SDL_Delay( delay );
 	}
 

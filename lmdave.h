@@ -21,9 +21,15 @@ typedef struct {
 	uint8_t do_right;
 	uint8_t do_left;
 	uint8_t do_jump;
+	uint8_t jump_timer;
+	// pickup tile pos
+	uint8_t check_pickup_x;
+	uint8_t check_pickup_y;
 
 	// collision point clear flags; 1 = clear
 	uint8_t col_point[8];
+	// collision rect pls
+	SDL_Rect col_rect;
 } dave_state_t;
 
 // global game state
