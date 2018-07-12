@@ -72,15 +72,56 @@ void clear_input() {
 	gs->ds.try_jump = 0;
 }
 
+// returns 1 if passed pixel point is not within a solid tile
+uint8_t is_clear( uint16_t px, uint16_t py ) {
+	uint8_t tx, ty; // tile pos
+	uint8_t til; // tile index
+
+	// pixel point to tile pos
+	tx = px / TILE_SIZE; ty = py / TILE_SIZE;
+	// tile index at level's tx, ty pos
+	til = gs->levels[gs->current_level].tiles[ty * 100 + tx];
+
+	// solid tiles
+	if ( til == 1 || til == 3 || til == 5 ) return 0;
+	if ( til >= 15 && til <= 19 ) return 0;
+	if ( til >= 21 && til <= 24 ) return 0;
+	if ( til >= 29 && til <= 30 ) return 0;
+
+	return 1;
+}
+
+// update collision point clear flags
+void check_collision() {
+	// 8 points of collision; relative to top left of tile 56 neutral frame (20x16)
+	// 0, 1 = top left, top right, above sprite
+	gs->ds.col_point[0] = is_clear( gs->ds.px + 4, gs->ds.py - 1 );
+	gs->ds.col_point[1] = is_clear( gs->ds.px + 10, gs->ds.py - 1 );
+	// 2, 3 = right edge
+	gs->ds.col_point[2] = is_clear( gs->ds.px + 11, gs->ds.py + 4 );
+	gs->ds.col_point[3] = is_clear( gs->ds.px + 11, gs->ds.py + 12 );
+	// 4, 5 = bottom edge
+	gs->ds.col_point[4] = is_clear( gs->ds.px + 10, gs->ds.py + 16 );
+	gs->ds.col_point[5] = is_clear( gs->ds.px + 4, gs->ds.py + 16 );
+	// 6, 7 = left edge
+	gs->ds.col_point[6] = is_clear( gs->ds.px + 3, gs->ds.py + 12 );
+	gs->ds.col_point[7] = is_clear( gs->ds.px + 3, gs->ds.py + 4 );
+	// update on_ground flag if bottom edge points (4,5) are not clear
+	gs->ds.on_ground = (!gs->ds.col_point[4] && !gs->ds.col_point[5]);
+}
+
 // validate input whose try flags were set
 void verify_input() {
-	if ( gs->ds.try_right ) {
+	// right; col points 2, 3
+	if ( gs->ds.try_right && gs->ds.col_point[2] && gs->ds.col_point[3] ) {
 		gs->ds.do_right = 1;
 	}
-	if ( gs->ds.try_left ) {
+	// left; col points 6, 7
+	if ( gs->ds.try_left && gs->ds.col_point[6] && gs->ds.col_point[7] ) {
 		gs->ds.do_left = 1;
 	}
-	if ( gs->ds.try_jump ) {
+	// jump; on_ground and col points 0, 1
+	if ( gs->ds.try_jump && gs->ds.on_ground && gs->ds.col_point[0] && gs->ds.col_point[1] ) {
 		gs->ds.do_jump = 1;
 	}
 }
@@ -117,6 +158,8 @@ void update_game() {
 	if ( gs->current_level > NUM_EXE_LEVELS - 1 )
 		gs->current_level = NUM_EXE_LEVELS - 1;*/
 
+	// update collision point flags
+	check_collision();
 	// verify input try flags
 	verify_input();
 	// apply dave movement

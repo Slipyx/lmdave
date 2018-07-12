@@ -10,6 +10,8 @@
 typedef struct {
 	uint8_t tx, ty; // tile pos
 	uint16_t px, py; // pixel pos
+	// on ground flag
+	uint8_t on_ground;
 
 	// input flags
 	uint8_t try_right;
@@ -19,6 +21,9 @@ typedef struct {
 	uint8_t do_right;
 	uint8_t do_left;
 	uint8_t do_jump;
+
+	// collision point clear flags; 1 = clear
+	uint8_t col_point[8];
 } dave_state_t;
 
 // global game state
