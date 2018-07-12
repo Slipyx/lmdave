@@ -13,6 +13,12 @@ void init_game() {
 	gs->view_y = 0;
 	gs->scroll_x = 0;
 
+	// dave state at level 1;
+	gs->ds.tx = 2;
+	gs->ds.ty = 8;
+	gs->ds.px = gs->ds.tx * TILE_SIZE;
+	gs->ds.py = gs->ds.ty * TILE_SIZE;
+
 	// returns array of NUM_EXE_LEVELS that was loaded by the util lib
 	gs->levels = GetLevels();
 }
@@ -32,30 +38,69 @@ void init_assets( SDL_Renderer* r ) {
 void check_input() {
 	SDL_Event ev;
 	SDL_PollEvent( &ev );
+	// real-time keystate
+	const uint8_t* keys = SDL_GetKeyboardState( NULL );
 
-	if ( ev.type == SDL_QUIT ) gs->quit = 1;
+	// attempt dave movement by setting try_ flags
+	if ( keys[SDL_SCANCODE_RIGHT] ) gs->ds.try_right = 1;
+	if ( keys[SDL_SCANCODE_LEFT] ) gs->ds.try_left = 1;
+	if ( keys[SDL_SCANCODE_UP] ) gs->ds.try_jump = 1;
 
-	if ( ev.type == SDL_KEYDOWN ) {
-		switch ( ev.key.keysym.sym ) {
-		case SDLK_RIGHT:
-			gs->scroll_x = 15; break;
-		case SDLK_LEFT:
-			gs->scroll_x = -15; break;
-		case SDLK_DOWN:
-			gs->current_level++; break;
-		case SDLK_UP:
-			gs->current_level--; break;
-		}
+	// events
+	switch ( ev.type ) {
+
+	case SDL_QUIT: gs->quit = 1; break;
+
+	case SDL_KEYDOWN: {
+		if ( ev.key.repeat ) break;
+		SDL_Keycode key = ev.key.keysym.sym;
+		// android back
+		if ( key == SDLK_AC_BACK ) gs->quit = 1;
+
+		/*if ( key == SDLK_RIGHT ) gs->scroll_x = 15;
+		if ( key == SDLK_LEFT ) gs->scroll_x = -15;
+		if ( key == SDLK_DOWN ) gs->current_level++;
+		if ( key == SDLK_UP ) gs->current_level--;*/
+	}
+	} // switch
+}
+
+// clear all try input flags at end of frame
+void clear_input() {
+	gs->ds.try_left = 0;
+	gs->ds.try_right = 0;
+	gs->ds.try_jump = 0;
+}
+
+// validate input whose try flags were set
+void verify_input() {
+	if ( gs->ds.try_right ) {
+		gs->ds.do_right = 1;
+	}
+	if ( gs->ds.try_left ) {
+		gs->ds.do_left = 1;
+	}
+	if ( gs->ds.try_jump ) {
+		gs->ds.do_jump = 1;
 	}
 }
 
-// update game logic
-void update_game() {
-	if ( gs->current_level == 0xff ) gs->current_level = 0;
-	if ( gs->current_level > NUM_EXE_LEVELS - 1 )
-		gs->current_level = NUM_EXE_LEVELS - 1;
+// apply validated dave movement
+void move_dave() {
+	if ( gs->ds.do_right ) {
+		gs->ds.px += 1;
+		gs->ds.do_right = 0;
+	}
+	if ( gs->ds.do_left ) {
+		gs->ds.px -= 1;
+		gs->ds.do_left = 0;
+	}
+	if ( gs->ds.do_jump ) {
+	}
+}
 
-	// scrolling
+// update game view based on set scroll values
+void scroll_screen() {
 	if ( gs->scroll_x > 0 ) {
 		if ( gs->view_x == 80 ) gs->scroll_x = 0;
 		else { gs->view_x++; gs->scroll_x--; }
@@ -66,22 +111,56 @@ void update_game() {
 	}
 }
 
+// update game logic
+void update_game() {
+	/*if ( gs->current_level == 0xff ) gs->current_level = 0;
+	if ( gs->current_level > NUM_EXE_LEVELS - 1 )
+		gs->current_level = NUM_EXE_LEVELS - 1;*/
+
+	// verify input try flags
+	verify_input();
+	// apply dave movement
+	move_dave();
+	// game view scrolling
+	scroll_screen();
+	// reset input flags
+	clear_input();
+}
+
+// draw level at current view
+void draw_world( SDL_Renderer* r ) {
+	SDL_Rect dst;
+	// draw level view 20x10 tiles at 16x16px
+	for ( int j = 0; j < 10; ++j ) {
+		dst.y = j * TILE_SIZE;
+		dst.w = TILE_SIZE; dst.h = TILE_SIZE;
+		for ( int i = 0; i < 20; ++i ) {
+			dst.x = i * TILE_SIZE;
+			uint8_t til = gs->levels[gs->current_level].tiles[j * 100 + gs->view_x + i];
+			SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
+		}
+	}
+}
+
+// draw dave
+void draw_dave( SDL_Renderer* r ) {
+	SDL_Rect dst;
+	dst.x = gs->ds.px;
+	dst.y = gs->ds.py;
+	// tile 56 neutral; 20x16px
+	dst.w = 20; dst.h = 16;
+
+	// render
+	SDL_RenderCopy( r, g_assets->tile_tx[56], NULL, &dst );
+}
+
 // draw to renderer
 void render( SDL_Renderer* r ) {
 	// clear backbuffer
 	SDL_RenderClear( r );
 
-	SDL_Rect dst;
-	// draw level 20x10 tiles at 16x16px
-	for ( int j = 0; j < 10; ++j ) {
-		dst.y = j * 16;
-		dst.w = 16; dst.h = 16;
-		for ( int i = 0; i < 20; ++i ) {
-			dst.x = i * 16;
-			uint8_t til = gs->levels[gs->current_level].tiles[j * 100 + gs->view_x + i];
-			SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
-		}
-	}
+	draw_world( r );
+	draw_dave( r );
 
 	// flip buffers
 	SDL_RenderPresent( r );
@@ -134,7 +213,7 @@ int main( int argc, char** argv ) {
 	FreeTileSurfaces();
 
 	// clear initial frame
-	SDL_SetRenderDrawColor( renderer, 0, 0, 0, 0xff );
+	SDL_SetRenderDrawColor( renderer, 0, 40, 80, 0xff );
 	SDL_RenderClear( renderer );
 
 	// main loop
@@ -162,6 +241,11 @@ int main( int argc, char** argv ) {
 	SDL_DestroyRenderer( renderer );
 	SDL_DestroyWindow( window );
 	SDL_Quit();
+
+	// an explicit exit for android
+#ifdef __ANDROID__
+	exit( EXIT_SUCCESS );
+#endif
 
 	return EXIT_SUCCESS;
 }

@@ -43,9 +43,9 @@ endif
 
 # binary target
 ifdef ISWIN
-	TARG_t := lmdave.exe
+	TARG_t := build/lmdave.exe
 else
-	TARG_t := lmdave
+	TARG_t := build/lmdave
 endif
 
 game: $(TARG_t)
