@@ -20,7 +20,7 @@ void init_game() {
 	gs->ds.px = gs->ds.tx * TILE_SIZE;
 	gs->ds.py = gs->ds.ty * TILE_SIZE;
 	gs->ds.jump_timer = 0;
-	gs->ds.on_ground = 1;
+	gs->ds.on_ground = 0;
 
 	// returns array of NUM_EXE_LEVELS that was loaded by the util lib
 	gs->levels = GetLevels();
@@ -35,11 +35,9 @@ void init_assets( SDL_Renderer* r ) {
 	for ( int i = 0; i < NUM_EXE_TILES; ++i ) {
 		// mask dave sprites
 		if ( (i >= 53 && i <= 59) || (i >= 67 && i <= 68)
-			 || (i >= 71 && i <= 73) || (i >= 77 && i <= 82) ) {
+			 || (i >= 71 && i <= 73) || (i >= 77 && i <= 82) )
 			SDL_SetColorKey( tileSfcs[i], 1, SDL_MapRGB( tileSfcs[i]->format, 0, 0, 0 ) );
-			g_assets->tile_tx[i] = SDL_CreateTextureFromSurface( r, tileSfcs[i] );
-		} else
-			g_assets->tile_tx[i] = SDL_CreateTextureFromSurface( r, tileSfcs[i] );
+		g_assets->tile_tx[i] = SDL_CreateTextureFromSurface( r, tileSfcs[i] );
 	}
 }
 
@@ -119,17 +117,17 @@ uint8_t is_clear( uint16_t px, uint16_t py ) {
 void check_collision() {
 	// 8 points of collision; relative to top left of tile 56 neutral frame (20x16)
 	// 0, 1 = top left, top right, above sprite
-	gs->ds.col_point[0] = is_clear( gs->ds.px + 4, gs->ds.py - 1 );
-	gs->ds.col_point[1] = is_clear( gs->ds.px + 10, gs->ds.py - 1 );
+	gs->ds.col_point[0] = is_clear( gs->ds.px + 4, gs->ds.py - 0 );
+	gs->ds.col_point[1] = is_clear( gs->ds.px + 10, gs->ds.py - 0 );
 	// 2, 3 = right edge
-	gs->ds.col_point[2] = is_clear( gs->ds.px + 11, gs->ds.py + 4 );
-	gs->ds.col_point[3] = is_clear( gs->ds.px + 11, gs->ds.py + 12 );
+	gs->ds.col_point[2] = is_clear( gs->ds.px + 12, gs->ds.py + 2 );
+	gs->ds.col_point[3] = is_clear( gs->ds.px + 12, gs->ds.py + 14 );
 	// 4, 5 = bottom edge
 	gs->ds.col_point[4] = is_clear( gs->ds.px + 10, gs->ds.py + 16 );
 	gs->ds.col_point[5] = is_clear( gs->ds.px + 4, gs->ds.py + 16 );
 	// 6, 7 = left edge
-	gs->ds.col_point[6] = is_clear( gs->ds.px + 3, gs->ds.py + 12 );
-	gs->ds.col_point[7] = is_clear( gs->ds.px + 3, gs->ds.py + 4 );
+	gs->ds.col_point[6] = is_clear( gs->ds.px + 2, gs->ds.py + 14 );
+	gs->ds.col_point[7] = is_clear( gs->ds.px + 2, gs->ds.py + 2 );
 	// update on_ground flag if a bottom point (4,5) is not clear
 	gs->ds.on_ground = (!gs->ds.col_point[4] || !gs->ds.col_point[5]);
 }
@@ -167,9 +165,9 @@ void move_dave() {
 	}
 	if ( gs->ds.do_jump ) {
 		if ( !gs->ds.jump_timer )
-			gs->ds.jump_timer = 20;
+			gs->ds.jump_timer = 19;
 
-		if ( gs->ds.col_point[0] || gs->ds.col_point[1] ) {
+		if ( gs->ds.col_point[0] && gs->ds.col_point[1] ) {
 			if ( gs->ds.jump_timer > 5 ) gs->ds.py -= 2;
 			else gs->ds.py -= 1;
 			gs->ds.jump_timer--;
@@ -186,7 +184,7 @@ void move_dave() {
 void apply_gravity() {
 	if ( !gs->ds.do_jump && !gs->ds.on_ground ) {
 		// check below sprite
-		if ( is_clear( gs->ds.px + 4, gs->ds.py + 17 ) )
+		if ( is_clear( gs->ds.px + 4, gs->ds.py + 17 ) && is_clear( gs->ds.px + 10, gs->ds.py + 17 ) )
 			gs->ds.py += 2;
 		else { // align to tile
 			uint8_t not_align = gs->ds.py % TILE_SIZE;
@@ -255,15 +253,12 @@ void draw_dave( SDL_Renderer* r ) {
 	dst.w = 20; dst.h = 16;
 
 	// render
+	// grounded debug
 	/*if ( gs->ds.on_ground ) {
 		SDL_SetRenderDrawColor( r, 255, 0, 255, 255 );
 		SDL_RenderDrawRect( r, &dst );
-	}
-	if ( gs->ds.jump_timer ) {
-		SDL_SetRenderDrawColor( r, 0, 255, 255, 255 );
-		SDL_RenderDrawRect( r, &(SDL_Rect){dst.x-16,dst.y-16,16,16} );
 	}*/
-	SDL_RenderCopy( r, g_assets->tile_tx[56], NULL, &dst );
+	SDL_RenderCopy( r, g_assets->tile_tx[53], NULL, &dst );
 }
 
 // draw to renderer
@@ -339,8 +334,8 @@ int main( int argc, char** argv ) {
 		render( renderer );
 
 		//uint32_t et = SDL_GetTicks();
-		uint32_t delay = 33 - (SDL_GetTicks() - st);
-		delay = delay > 33 ? 0 : delay;
+		uint32_t delay = FRAME_DELAY - (SDL_GetTicks() - st);
+		delay = delay > FRAME_DELAY ? 0 : delay;
 		SDL_Delay( delay );
 	}
 

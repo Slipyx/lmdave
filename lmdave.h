@@ -28,8 +28,6 @@ typedef struct {
 
 	// collision point clear flags; 1 = clear
 	uint8_t col_point[8];
-	// collision rect pls
-	SDL_Rect col_rect;
 } dave_state_t;
 
 // global game state
@@ -53,6 +51,8 @@ typedef struct {
 } game_assets_t;
 
 // level tile size in pixels
-#define TILE_SIZE 16
+const uint8_t TILE_SIZE = 16;
+// fixed frame delay
+const uint8_t FRAME_DELAY = 33;
 
 #endif
