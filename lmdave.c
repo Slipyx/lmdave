@@ -9,18 +9,9 @@ game_assets_t* g_assets = NULL;
 void init_game() {
 	gs->quit = 0;
 	gs->current_level = 0;
-	gs->view_x = 0;
-	gs->view_y = 0;
-	gs->scroll_x = 0;
 
-	// dave state at level 1;
+	// clean dave state
 	memset( &gs->ds, 0, sizeof(dave_state_t) );
-	gs->ds.tx = 2;
-	gs->ds.ty = 8;
-	gs->ds.px = gs->ds.tx * TILE_SIZE;
-	gs->ds.py = gs->ds.ty * TILE_SIZE;
-	gs->ds.jump_timer = 0;
-	gs->ds.on_ground = 0;
 
 	// returns array of NUM_EXE_LEVELS that was loaded by the util lib
 	gs->levels = GetLevels();
@@ -41,6 +32,33 @@ void init_assets( SDL_Renderer* r ) {
 	}
 }
 
+// sets new beginning state based on current level
+void start_level() {
+	gs->view_x = 0;
+	gs->view_y = 0;
+	gs->scroll_x = 0;
+
+	gs->ds.jump_timer = 0;
+	gs->ds.on_ground = 0;
+
+	// hardcoded player starts
+	switch ( gs->current_level ) {
+	case 0: gs->ds.tx = 2; gs->ds.ty = 8; break;
+	case 1: gs->ds.tx = 1; gs->ds.ty = 8; break;
+	case 2: gs->ds.tx = 2; gs->ds.ty = 5; break;
+	case 3: gs->ds.tx = 1; gs->ds.ty = 5; break;
+	default: break;
+	}
+
+	gs->ds.px = gs->ds.tx * TILE_SIZE;
+	gs->ds.py = gs->ds.ty * TILE_SIZE;
+	// reset items
+	gs->ds.gun = 0;
+	gs->ds.jetpack = 0;
+	gs->ds.trophy = 0;
+	gs->ds.check_door = 0;
+}
+
 // poll input
 void check_input() {
 	SDL_Event ev;
@@ -51,7 +69,7 @@ void check_input() {
 	// attempt dave movement by setting try_ flags
 	if ( keys[SDL_SCANCODE_RIGHT] ) gs->ds.try_right = 1;
 	if ( keys[SDL_SCANCODE_LEFT] ) gs->ds.try_left = 1;
-	if ( keys[SDL_SCANCODE_UP] ) gs->ds.try_jump = 1;
+	//if ( keys[SDL_SCANCODE_UP] ) gs->ds.try_jump = 1;
 
 	// events
 	switch ( ev.type ) {
@@ -62,8 +80,11 @@ void check_input() {
 		if ( ev.key.repeat ) break;
 		SDL_Keycode key = ev.key.keysym.sym;
 		// android back
-		if ( key == SDLK_AC_BACK ) gs->quit = 1;
-	}
+		if ( key == SDLK_AC_BACK ) { gs->quit = 1; }
+		// jump event
+		if ( key == SDLK_UP ) { gs->ds.try_jump = 1; }
+	} break;
+	default: break;
 	} // switch
 }
 
@@ -72,6 +93,10 @@ void clear_input() {
 	gs->ds.try_left = 0;
 	gs->ds.try_right = 0;
 	gs->ds.try_jump = 0;
+	gs->ds.try_fire = 0;
+	gs->ds.try_jetpack = 0;
+	gs->ds.try_up = 0;
+	gs->ds.try_down = 0;
 }
 
 // remove item from world
@@ -80,7 +105,12 @@ void pickup_item( uint8_t tx, uint8_t ty ) {
 
 	uint8_t til = gs->levels[gs->current_level].tiles[ty * 100 + tx];
 	// pickup functionality here
-	(void)til;
+	if ( til == 4 ) gs->ds.jetpack = 0xff;
+	if ( til == 10 ) {
+		gs->ds.score += 1000;
+		gs->ds.trophy = 1;
+	}
+	if ( til == 20 ) gs->ds.gun = 1;
 
 	// remove
 	gs->levels[gs->current_level].tiles[ty * 100 + tx] = 0;
@@ -105,9 +135,14 @@ uint8_t is_clear( uint16_t px, uint16_t py ) {
 	if ( til >= 29 && til <= 30 ) return 0;
 
 	// pickups
-	if ( til == 10 || (til >= 47 && til <= 52) ) {
+	if ( til == 10 || til == 4 || til == 20 || (til >= 47 && til <= 52) ) {
 		gs->ds.check_pickup_x = tx;
 		gs->ds.check_pickup_y = ty;
+	}
+
+	// door
+	if ( til == 2 ) {
+		gs->ds.check_door = 1;
 	}
 
 	return 1;
@@ -116,7 +151,7 @@ uint8_t is_clear( uint16_t px, uint16_t py ) {
 // update collision point clear flags
 void check_collision() {
 	// 8 points of collision; relative to top left of tile 56 neutral frame (20x16)
-	// 0, 1 = top left, top right, above sprite
+	// 0, 1 = top left, top right
 	gs->ds.col_point[0] = is_clear( gs->ds.px + 4, gs->ds.py - 0 );
 	gs->ds.col_point[1] = is_clear( gs->ds.px + 10, gs->ds.py - 0 );
 	// 2, 3 = right edge
@@ -147,12 +182,16 @@ void verify_input() {
 		 && (gs->ds.col_point[0] && gs->ds.col_point[1]) ) {
 		gs->ds.do_jump = 1;
 	}
+	// reset jump timer if contact a ground while still "jumping"
+	if ( gs->ds.try_jump && gs->ds.on_ground && gs->ds.jump_timer )
+		gs->ds.jump_timer = 0;
 }
 
 // apply validated dave movement
 void move_dave() {
 	// update dave's tile pos
-	gs->ds.tx = gs->ds.px / TILE_SIZE;
+	// sample x towards the center
+	gs->ds.tx = (gs->ds.px + TILE_SIZE / 2) / TILE_SIZE;
 	gs->ds.ty = gs->ds.py / TILE_SIZE;
 
 	if ( gs->ds.do_right ) {
@@ -165,15 +204,17 @@ void move_dave() {
 	}
 	if ( gs->ds.do_jump ) {
 		if ( !gs->ds.jump_timer )
-			gs->ds.jump_timer = 19;
+			gs->ds.jump_timer = 25;
 
 		if ( gs->ds.col_point[0] && gs->ds.col_point[1] ) {
-			if ( gs->ds.jump_timer > 5 ) gs->ds.py -= 2;
-			else gs->ds.py -= 1;
+			if ( gs->ds.jump_timer > 12 )
+				gs->ds.py -= 2;
+			if ( gs->ds.jump_timer >= 7 && gs->ds.jump_timer <= 12 )
+				gs->ds.py -= 1;
 			gs->ds.jump_timer--;
-		} else {
-			gs->ds.jump_timer = 0;
-		}
+		} else gs->ds.jump_timer = 0;
+
+		//gs->ds.jump_timer--;
 
 		if ( !gs->ds.jump_timer )
 			gs->ds.do_jump = 0;
@@ -196,8 +237,32 @@ void apply_gravity() {
 	}
 }
 
+void update_level() {
+	// check if at door and has trophy
+	if ( gs->ds.check_door ) {
+		if ( gs->ds.trophy ) {
+			if ( gs->current_level < 9 ) {
+				gs->current_level++;
+				start_level();
+			} else {
+				// finshed level 10
+				gs->quit = 1;
+			}
+		} else { // no trophy
+			gs->ds.check_door = 0;
+		}
+	}
+}
+
 // update game view based on set scroll values
 void scroll_screen() {
+	// scroll view if dave is about to move off view
+	if ( gs->ds.tx - gs->view_x >= 18 )
+		gs->scroll_x = 15;
+	if ( gs->ds.tx - gs->view_x < 2 )
+		gs->scroll_x = -15;
+
+	// do the scroll
 	if ( gs->scroll_x > 0 ) {
 		if ( gs->view_x == 80 ) gs->scroll_x = 0;
 		else { gs->view_x++; gs->scroll_x--; }
@@ -225,6 +290,8 @@ void update_game() {
 	// game view scrolling
 	scroll_screen();
 	apply_gravity();
+	// update level-wide state
+	update_level();
 	// reset input flags
 	clear_input();
 }
@@ -247,18 +314,20 @@ void draw_world( SDL_Renderer* r ) {
 // draw dave
 void draw_dave( SDL_Renderer* r ) {
 	SDL_Rect dst;
-	dst.x = gs->ds.px;
+	// relative to view
+	dst.x = gs->ds.px - gs->view_x * TILE_SIZE;
 	dst.y = gs->ds.py;
 	// tile 56 neutral; 20x16px
+	uint8_t til = 53;
 	dst.w = 20; dst.h = 16;
 
 	// render
 	// grounded debug
-	/*if ( gs->ds.on_ground ) {
+	if ( gs->ds.on_ground ) {
 		SDL_SetRenderDrawColor( r, 255, 0, 255, 255 );
 		SDL_RenderDrawRect( r, &dst );
-	}*/
-	SDL_RenderCopy( r, g_assets->tile_tx[53], NULL, &dst );
+	}
+	SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
 }
 
 // draw to renderer
@@ -323,6 +392,9 @@ int main( int argc, char** argv ) {
 	// clear initial frame
 	SDL_SetRenderDrawColor( renderer, 0, 40, 80, 0xff );
 	SDL_RenderClear( renderer );
+
+	// set state for first level
+	start_level();
 
 	// main loop
 	while ( !gs->quit ) {
