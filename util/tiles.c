@@ -30,7 +30,7 @@ void LoadTiles() {
 	const uint32_t vga_data_addr = 0x120f0;
 	const uint32_t vga_pal_addr = 0x26b0a;
 	// exe assumed uncompressed
-	SDL_RWops* ddexe = SDL_RWFromFile( "DAVE.EXE", "rb" );
+	SDL_RWops* ddexe = SDL_RWFromFile( "res/DAVE.EXE", "rb" );
 	if ( ddexe != NULL ) printf( "SUCCESS! (%"PRIi64" bytes)\n", SDL_RWsize( ddexe ) );
 	else { fprintf( stderr, "Error opening DAVE.EXE for tiles!\n" ); exit( EXIT_FAILURE ); }
 
@@ -153,13 +153,13 @@ void FreeTileSurfaces() {
 #ifdef UTIL_BIN
 int main( int argc, char** argv ) {
 	// high scores
-	SDL_RWops* dscor = SDL_RWFromFile( "../DSCORES.DAV", "rb" );
+	/*SDL_RWops* dscor = SDL_RWFromFile( "res/DSCORES.DAV", "rb" );
 	uint8_t lscor[9];
 	while ( SDL_RWread( dscor, lscor, 9, 1 ) ) {
 		printf( "LVL %u - SCORE: %u%u%u%u%u - NAM: %.3s\n", lscor[0],
 			lscor[1], lscor[2], lscor[3], lscor[4], lscor[5], (char*)&lscor[6] );
 	}
-	SDL_RWclose( dscor );
+	SDL_RWclose( dscor );*/
 
 	LoadTiles();
 	SaveTiles();

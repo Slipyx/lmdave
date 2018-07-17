@@ -13,8 +13,9 @@ void init_game() {
 	// clean dave state
 	memset( &gs->ds, 0, sizeof(dave_state_t) );
 
-	// returns array of NUM_EXE_LEVELS that was loaded by the util lib
-	gs->levels = GetLevels();
+	// copy all levels loaded from exe by util
+	for ( int i = 0; i < NUM_EXE_LEVELS; ++i )
+		GetLevel( i, &gs->levels[i] );
 }
 
 // initialize game assets
@@ -40,13 +41,16 @@ void start_level() {
 
 	gs->ds.jump_timer = 0;
 	gs->ds.on_ground = 0;
+	gs->ds.do_jump = 0;
 
 	// hardcoded player starts
 	switch ( gs->current_level ) {
-	case 0: gs->ds.tx = 2; gs->ds.ty = 8; break;
+	case 0: case 4: case 5: case 7: case 9: gs->ds.tx = 2; gs->ds.ty = 8; break;
 	case 1: gs->ds.tx = 1; gs->ds.ty = 8; break;
 	case 2: gs->ds.tx = 2; gs->ds.ty = 5; break;
 	case 3: gs->ds.tx = 1; gs->ds.ty = 5; break;
+	case 6: gs->ds.tx = 1; gs->ds.ty = 2; break;
+	case 8: gs->ds.tx = 6; gs->ds.ty = 1; break;
 	default: break;
 	}
 
@@ -62,7 +66,27 @@ void start_level() {
 // poll input
 void check_input() {
 	SDL_Event ev;
-	SDL_PollEvent( &ev );
+
+	while ( SDL_PollEvent( &ev ) ) {
+
+		// events
+		switch ( ev.type ) {
+
+		case SDL_QUIT: gs->quit = 1; break;
+
+		case SDL_KEYDOWN: {
+			if ( ev.key.repeat ) break;
+			SDL_Keycode key = ev.key.keysym.sym;
+			// android back
+			if ( key == SDLK_AC_BACK ) { gs->quit = 1; }
+			// jump event
+			if ( key == SDLK_UP || key == SDLK_z ) { gs->ds.try_jump = 1; }
+		} break;
+
+		default: break;
+		} // switch
+	}
+
 	// real-time keystate
 	const uint8_t* keys = SDL_GetKeyboardState( NULL );
 
@@ -70,22 +94,6 @@ void check_input() {
 	if ( keys[SDL_SCANCODE_RIGHT] ) gs->ds.try_right = 1;
 	if ( keys[SDL_SCANCODE_LEFT] ) gs->ds.try_left = 1;
 	//if ( keys[SDL_SCANCODE_UP] ) gs->ds.try_jump = 1;
-
-	// events
-	switch ( ev.type ) {
-
-	case SDL_QUIT: gs->quit = 1; break;
-
-	case SDL_KEYDOWN: {
-		if ( ev.key.repeat ) break;
-		SDL_Keycode key = ev.key.keysym.sym;
-		// android back
-		if ( key == SDLK_AC_BACK ) { gs->quit = 1; }
-		// jump event
-		if ( key == SDLK_UP ) { gs->ds.try_jump = 1; }
-	} break;
-	default: break;
-	} // switch
 }
 
 // clear all try input flags at end of frame
@@ -275,10 +283,6 @@ void scroll_screen() {
 
 // update game logic
 void update_game() {
-	/*if ( gs->current_level == 0xff ) gs->current_level = 0;
-	if ( gs->current_level > NUM_EXE_LEVELS - 1 )
-		gs->current_level = NUM_EXE_LEVELS - 1;*/
-
 	// update collision point flags
 	check_collision();
 	// pickups
@@ -289,6 +293,7 @@ void update_game() {
 	move_dave();
 	// game view scrolling
 	scroll_screen();
+	// dave gravity
 	apply_gravity();
 	// update level-wide state
 	update_level();
@@ -357,14 +362,10 @@ int main( int argc, char** argv ) {
 	if ( SDL_Init( SDL_INIT_VIDEO ) )
 		SDL_Log( "SDL Init error: %s\n", SDL_GetError() );
 
-	// SDL_Window* window = NULL;
-	// SDL_Renderer* renderer = NULL;
-	// if ( SDL_CreateWindowAndRenderer( 960, 720, SDL_WINDOW_RESIZABLE, &window, &renderer ) )
-	// 	SDL_Log( "SDL WindowAndRenderer error: %s\n", SDL_GetError() );
-
 	// create window and renderer
+	int winw = 1280, winh = 720;
 	SDL_Window* window = SDL_CreateWindow( "lmdave", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		1280, 720, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL );
+		winw, winh, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL );
 	if ( window == NULL ) {
 		SDL_Log( "SDL_CreateWindow error: %s\n", SDL_GetError() );
 		SDL_Quit(); return EXIT_FAILURE;
@@ -380,7 +381,6 @@ int main( int argc, char** argv ) {
 
 	// set internal rendering size
 	SDL_RenderSetLogicalSize( renderer, 320, 200 );
-	//SDL_RenderSetScale( renderer, R_SCALE, R_SCALE );
 	// scaling hint
 	//SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "linear" );
 
@@ -397,7 +397,7 @@ int main( int argc, char** argv ) {
 	start_level();
 
 	// main loop
-	while ( !gs->quit ) {
+	while ( gs->quit == 0 ) {
 		// fixed timestep
 		uint32_t st = SDL_GetTicks();
 
@@ -405,7 +405,6 @@ int main( int argc, char** argv ) {
 		update_game();
 		render( renderer );
 
-		//uint32_t et = SDL_GetTicks();
 		uint32_t delay = FRAME_DELAY - (SDL_GetTicks() - st);
 		delay = delay > FRAME_DELAY ? 0 : delay;
 		SDL_Delay( delay );
@@ -423,9 +422,10 @@ int main( int argc, char** argv ) {
 	SDL_Quit();
 
 	// an explicit exit for android
-#ifdef __ANDROID__
+#if defined( __ANDROID__ ) || defined( ANDROID )
 	exit( EXIT_SUCCESS );
 #endif
 
 	return EXIT_SUCCESS;
 }
+

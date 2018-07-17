@@ -7,9 +7,10 @@
 // all levels in the exe
 static level_t levels[NUM_EXE_LEVELS];
 
-// return level structure for external use
-level_t* GetLevels() {
-	return levels;
+// copy a single level structure for external use
+void GetLevel( unsigned n, level_t* lvl ) {
+	if ( n > NUM_EXE_LEVELS - 1 ) n = 0;
+	memcpy( lvl, &levels[n], sizeof(level_t) );
 }
 
 // export all levels to seperate .dat file
@@ -40,7 +41,7 @@ void SaveLevels() {
 void LoadLevels() {
 	const uint32_t lvl_dat_addr = 0x26e0a;
 
-	SDL_RWops* ddexe = SDL_RWFromFile( "DAVE.EXE", "rb" );
+	SDL_RWops* ddexe = SDL_RWFromFile( "res/DAVE.EXE", "rb" );
 	if ( ddexe == NULL ) { fprintf( stderr, "Error opening DAVE.EXE for levels.\n" ); return; }
 
 	// 10 levels @ 1280 bytes each

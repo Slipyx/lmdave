@@ -27,7 +27,7 @@ typedef struct {
 
 // levels
 void LoadLevels();
-level_t* GetLevels();
+void GetLevel( unsigned n, level_t* lvl );
 void SaveLevels();
 void CreateWorldMap();
 

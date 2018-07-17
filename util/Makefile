@@ -42,9 +42,9 @@ endif
 
 # binary target
 ifdef ISWIN
-	TARG_t := util.exe
+	TARG_t := ../build/util.exe
 else
-	TARG_t := util
+	TARG_t := ../build/util
 endif
 
 utils: $(TARG_t)

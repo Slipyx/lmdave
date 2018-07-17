@@ -54,7 +54,7 @@ typedef struct {
 	// dave player state
 	dave_state_t ds;
 
-	level_t* levels; // grabbed from util, NUM_EXE_LEVELS count
+	level_t levels[NUM_EXE_LEVELS]; // copied from exe util's GetLevel
 } game_state_t;
 
 // game assets
@@ -69,3 +69,4 @@ const uint8_t TILE_SIZE = 16;
 const uint8_t FRAME_DELAY = 33;
 
 #endif
+
