@@ -42,12 +42,14 @@ static void G_InitAssets( SDL_Renderer* r ) {
 	Util_FreeTileSurfaces();
 }
 
-// sets new beginning state based on current level
-void W_StartLevel() {
+// sets player position to current level's player start
+void P_Spawn() {
+	// reset view
 	gs->view_x = 0;
 	gs->view_y = 0;
 	gs->scroll_x = 0;
 
+	// reset player jump
 	gs->ps.jump_timer = 0;
 	gs->ps.on_ground = 0;
 	gs->ps.do_jump = 0;
@@ -65,11 +67,23 @@ void W_StartLevel() {
 
 	gs->ps.px = gs->ps.tx * TILE_SIZE;
 	gs->ps.py = gs->ps.ty * TILE_SIZE;
+}
+
+// sets new beginning state for current level
+void W_StartLevel() {
+	P_Spawn();
+
 	// reset items
 	gs->ps.gun = 0;
 	gs->ps.jetpack = 0;
 	gs->ps.trophy = 0;
 	gs->ps.check_door = 0;
+}
+
+// hard reset current level from original data
+void W_ResetLevel() {
+	Util_GetLevel( gs->current_level, &gs->levels[gs->current_level] );
+	W_StartLevel();
 }
 
 // poll input
@@ -90,6 +104,11 @@ static void G_CheckInput() {
 			if ( key == SDLK_AC_BACK ) { gs->quit = 1; }
 			// jump event
 			if ( key == SDLK_UP || key == SDLK_z ) { gs->ps.try_jump = 1; }
+			// level select
+			if ( key >= SDLK_0 && key <= SDLK_9 ) {
+				gs->current_level = key - SDLK_0;
+				W_ResetLevel();
+			}
 		} break;
 
 		default: break;
@@ -154,6 +173,11 @@ uint8_t W_IsClear( uint16_t px, uint16_t py ) {
 	if ( til >= 15 && til <= 19 ) return 0;
 	if ( til >= 21 && til <= 24 ) return 0;
 	if ( til >= 29 && til <= 30 ) return 0;
+
+	// kill tiles
+	if ( til == 6 || til == 25 || til == 36 ) {
+		P_Spawn();
+	}
 
 	// pickups
 	if ( til == 10 || til == 4 || til == 20 || (til >= 47 && til <= 52) ) {
