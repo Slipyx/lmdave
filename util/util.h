@@ -9,10 +9,10 @@
 #define NUM_EXE_LEVELS 10
 
 // tiles
-void LoadTiles();
-SDL_Surface** GetTileSurfaces();
-void SaveTiles();
-void FreeTileSurfaces();
+void Util_LoadTiles();
+SDL_Surface** Util_GetTileSurfaces();
+void Util_SaveTiles();
+void Util_FreeTileSurfaces();
 
 // level structure
 // byte[256] path, two signed 8bit relative movement, 0xea 0xea for end
@@ -26,9 +26,9 @@ typedef struct {
 } level_t;
 
 // levels
-void LoadLevels();
-void GetLevel( unsigned n, level_t* lvl );
-void SaveLevels();
-void CreateWorldMap();
+void Util_LoadLevels();
+void Util_GetLevel( unsigned n, level_t* lvl );
+void Util_SaveLevels();
+void Util_CreateWorldMap();
 
 #endif

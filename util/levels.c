@@ -8,13 +8,13 @@
 static level_t levels[NUM_EXE_LEVELS];
 
 // copy a single level structure for external use
-void GetLevel( unsigned n, level_t* lvl ) {
+void Util_GetLevel( unsigned n, level_t* lvl ) {
 	if ( n > NUM_EXE_LEVELS - 1 ) n = 0;
 	memcpy( lvl, &levels[n], sizeof(level_t) );
 }
 
 // export all levels to seperate .dat file
-void SaveLevels() {
+void Util_SaveLevels() {
 	for ( int l = 0; l < NUM_EXE_LEVELS; ++l ) {
 		char fname[1024];
 		snprintf( fname, 1024, "./levels/level%02u.dat", l );
@@ -38,7 +38,7 @@ void SaveLevels() {
 }
 
 // fill global level array with dat from exe
-void LoadLevels() {
+void Util_LoadLevels() {
 	const uint32_t lvl_dat_addr = 0x26e0a;
 
 	SDL_RWops* ddexe = SDL_RWFromFile( "res/DAVE.EXE", "rb" );
@@ -72,7 +72,7 @@ void LoadLevels() {
 }
 
 // create a large world map image with all levels
-void CreateWorldMap() {
+void Util_CreateWorldMap() {
 	// create big empty surface for containing entire world map
 	SDL_Surface* map = SDL_CreateRGBSurface( 0, 1600, 1600, 32, 0, 0, 0, 0 );
 	// level, row, column
@@ -84,7 +84,7 @@ void CreateWorldMap() {
 				dst.x = x * 16;
 				dst.y = l * 160 + y * 16;
 				dst.w = 16; dst.h = 16;
-				SDL_Surface** tile_sfc = GetTileSurfaces();
+				SDL_Surface** tile_sfc = Util_GetTileSurfaces();
 				SDL_BlitSurface( tile_sfc[til], NULL, map, &dst );
 
 				// hardcoded player and monster starts

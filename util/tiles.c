@@ -9,7 +9,7 @@
 static SDL_Surface* tile_sfc[NUM_EXE_TILES];
 
 // export all tiles to bmp
-void SaveTiles() {
+void Util_SaveTiles() {
 	// Save out the all tile surfaces
 	for ( int curtil = 0; curtil < NUM_EXE_TILES; ++curtil ) {
 		SDL_Surface* sfc = tile_sfc[curtil];
@@ -21,12 +21,12 @@ void SaveTiles() {
 }
 
 // return tile surface array for external use
-SDL_Surface** GetTileSurfaces() {
+SDL_Surface** Util_GetTileSurfaces() {
 	return tile_sfc;
 }
 
 // fill global tile array with tiles from exe
-void LoadTiles() {
+void Util_LoadTiles() {
 	const uint32_t vga_data_addr = 0x120f0;
 	const uint32_t vga_pal_addr = 0x26b0a;
 	// exe assumed uncompressed
@@ -144,7 +144,7 @@ void LoadTiles() {
 }
 
 // free all loaded exe's tile surfaces
-void FreeTileSurfaces() {
+void Util_FreeTileSurfaces() {
 	for ( int i = 0; i < NUM_EXE_TILES; ++i ) {
 		SDL_FreeSurface( tile_sfc[i] );
 	}
@@ -161,15 +161,15 @@ int main( int argc, char** argv ) {
 	}
 	SDL_RWclose( dscor );*/
 
-	LoadTiles();
-	SaveTiles();
+	Util_LoadTiles();
+	Util_SaveTiles();
 
 	// LEVELS
-	LoadLevels();
-	SaveLevels();
-	CreateWorldMap();
+	Util_LoadLevels();
+	Util_SaveLevels();
+	Util_CreateWorldMap();
 
-	FreeTileSurfaces();
+	Util_FreeTileSurfaces();
 
 	return 0;
 }

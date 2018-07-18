@@ -41,7 +41,7 @@ typedef struct {
 
 	// collision point clear flags; 1 = clear
 	uint8_t col_point[8];
-} dave_state_t;
+} player_state_t;
 
 // global game state
 typedef struct {
@@ -51,8 +51,8 @@ typedef struct {
 	uint8_t view_x, view_y;
 	int8_t scroll_x;
 
-	// dave player state
-	dave_state_t ds;
+	// player state
+	player_state_t ps;
 
 	level_t levels[NUM_EXE_LEVELS]; // copied from exe util's GetLevel
 } game_state_t;
