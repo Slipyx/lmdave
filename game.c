@@ -362,8 +362,17 @@ static void G_Draw( SDL_Renderer* r ) {
 	SDL_RenderPresent( r );
 }
 
-// rendering scale
-//const uint8_t R_SCALE = 3;
+// main loop function for emscripten support
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+static void emloop( void* p ) {
+	SDL_Renderer* r = (SDL_Renderer*)p;
+	G_CheckInput();
+	G_Update();
+	G_Draw( r );
+}
+#endif
 
 int main( int argc, char** argv ) {
 	// initialize SDL
@@ -372,6 +381,10 @@ int main( int argc, char** argv ) {
 
 	// create window and renderer
 	int winw = 1280, winh = 720;
+	// emscripten canvas size
+#ifdef __EMSCRIPTEN__
+	winw = 1024; winh = 576;
+#endif
 	SDL_Window* window = SDL_CreateWindow( "lmdave", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		winw, winh, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL );
 	if ( window == NULL ) {
@@ -403,7 +416,10 @@ int main( int argc, char** argv ) {
 	// set state for first level
 	W_StartLevel();
 
-	// main loop
+	// main loop 
+#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop_arg( emloop, renderer, 1000 / FRAME_DELAY, 1 );
+#else
 	while ( gs->quit == 0 ) {
 		// fixed timestep
 		uint32_t st = SDL_GetTicks();
@@ -416,7 +432,7 @@ int main( int argc, char** argv ) {
 		delay = delay > FRAME_DELAY ? 0 : delay;
 		SDL_Delay( delay );
 	}
-
+#endif
 	// destroy each tile texture
 	for ( int i = 0; i < NUM_EXE_TILES; ++i )
 		SDL_DestroyTexture( g_assets->tile_tx[i] );
