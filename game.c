@@ -22,6 +22,7 @@ static void G_InitAssets( SDL_Renderer* r ) {
 	Util_LoadLevels();
 
 	g_assets = malloc( sizeof(game_assets_t) );
+	memset( g_assets, 0, sizeof(game_assets_t) );
 
 	// copy all levels loaded from exe by util
 	for ( int i = 0; i < NUM_EXE_LEVELS; ++i )
@@ -41,6 +42,10 @@ static void G_InitAssets( SDL_Renderer* r ) {
 
 	// tile surfaces should be converted as textures inside g_assets now
 	Util_FreeTileSurfaces();
+
+	// sfx
+	//g_assets->sfx[0] = S_LoadChunk( "res/jumpd8.wav" ); //Mix_LoadWAV_RW( rw, 1 );
+	//g_assets->sfx[1] = S_LoadChunk( "res/pickupd8.wav" ); //Mix_LoadWAV_RW( rw, 1 );
 }
 
 // poll input
@@ -61,6 +66,10 @@ static void G_CheckInput() {
 			if ( key == SDLK_AC_BACK ) { gs->quit = 1; }
 			// jump event
 			if ( key == SDLK_UP || key == SDLK_z ) { gs->ps.try_jump = 1; }
+			// fire
+			if ( key == SDLK_LCTRL || key == SDLK_x ) { gs->ps.try_fire = 1; }
+			// jetpack
+			if ( key == SDLK_LALT || key == SDLK_c ) { gs->ps.try_jetpack = 1; }
 			// level select
 			if ( key >= SDLK_0 && key <= SDLK_9 ) {
 				gs->current_level = key - SDLK_0;
@@ -78,7 +87,8 @@ static void G_CheckInput() {
 	// attempt dave movement by setting try_ flags
 	if ( keys[SDL_SCANCODE_RIGHT] ) gs->ps.try_right = 1;
 	if ( keys[SDL_SCANCODE_LEFT] ) gs->ps.try_left = 1;
-	//if ( keys[SDL_SCANCODE_UP] ) gs->ps.try_jump = 1;
+	if ( keys[SDL_SCANCODE_DOWN] ) gs->ps.try_down = 1;
+	if ( keys[SDL_SCANCODE_UP] ) gs->ps.try_up = 1;
 }
 
 // clear all try input flags at end of frame
@@ -98,6 +108,8 @@ static void G_Update() {
 	P_UpdateCollision();
 	// pickups
 	P_PickupItem();
+	// player bullet
+	P_UpdateBullet();
 	// verify input try flags
 	P_VerifyInput();
 	// apply player movement
@@ -114,7 +126,9 @@ static void G_Update() {
 
 // draw level at current view
 void Draw_World( SDL_Renderer* r ) {
-	SDL_Rect dst;
+	SDL_Rect dst = {0,0,320,200};
+	// solid BG fill
+	SDL_RenderCopy( r, g_assets->tile_tx[0], NULL, &dst );
 	// draw level view 20x10 tiles at 16x16px
 	for ( int j = 0; j < 10; ++j ) {
 		dst.y = j * TILE_SIZE;
@@ -122,6 +136,7 @@ void Draw_World( SDL_Renderer* r ) {
 		for ( int i = 0; i < 20; ++i ) {
 			dst.x = i * TILE_SIZE;
 			uint8_t til = gs->levels[gs->current_level].tiles[j * 100 + gs->view_x + i];
+			if ( til == 0 ) continue;
 			SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
 		}
 	}
@@ -133,17 +148,44 @@ void Draw_Player( SDL_Renderer* r ) {
 	// relative to view
 	dst.x = gs->ps.px - gs->view_x * TILE_SIZE;
 	dst.y = gs->ps.py;
-	// tile 56 neutral; 20x16px
-	uint8_t til = 53;
+	// tile 56 neutral, 53 right, 57 left 20x16px
+	uint8_t til = 56;
 	dst.w = 20; dst.h = 16;
+
+	// jetpack tile
+	if ( gs->ps.do_jetpack )
+		til = gs->ps.last_dir >= 0 ? 77 : 80;
+	// grounded walk tile
+	else if ( gs->ps.on_ground ) {
+		til = gs->ps.last_dir >= 0 ? 53 : 57;
+	}
+	// jump tile
+	else if ( gs->ps.do_jump || !gs->ps.on_ground )
+		til = gs->ps.last_dir >= 0 ? 67 : 68;
 
 	// render
 	// grounded debug
 	if ( gs->ps.on_ground ) {
 		SDL_SetRenderDrawColor( r, 255, 0, 255, 255 );
-		SDL_RenderDrawRect( r, &dst );
+		SDL_RenderDrawLine( r, dst.x, dst.y+dst.h, dst.x+dst.w, dst.y+dst.h );
 	}
 	SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
+}
+
+// draw player bullet
+void Draw_Bullet( SDL_Renderer* r ) {
+	SDL_Rect dst;
+	if ( gs->ps.bullet_px && gs->ps.bullet_py ) {
+		// relative to view
+		dst.x = gs->ps.bullet_px - gs->view_x * TILE_SIZE;
+		dst.y = gs->ps.bullet_py;
+		// tile 127 right, 128 left
+		uint8_t til = gs->ps.bullet_dir > 0 ? 127 : 128;
+		dst.w = 12; dst.h = 3;
+
+		// render
+		SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
+	}
 }
 
 // main drawing routine
@@ -154,6 +196,7 @@ static void G_Draw( SDL_Renderer* r ) {
 
 	Draw_World( r );
 	Draw_Player( r );
+	Draw_Bullet( r );
 
 	// flip buffers
 	SDL_RenderPresent( r );
@@ -173,8 +216,12 @@ static void emloop( void* p ) {
 
 int main( int argc, char** argv ) {
 	// initialize SDL
-	if ( SDL_Init( SDL_INIT_VIDEO ) )
+	if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO ) )
 		SDL_Log( "SDL Init error: %s\n", SDL_GetError() );
+	// mixer
+	//int res = Mix_OpenAudio( 22050, MIX_DEFAULT_FORMAT, 2, 1024 );
+	//if ( res < 0 ) fprintf( stderr, "Mix_OpenAudio error: %s\n", Mix_GetError() );
+	//Mix_AllocateChannels( 8 );
 
 	// create window and renderer
 	int winw = 1280, winh = 720;
@@ -212,10 +259,13 @@ int main( int argc, char** argv ) {
 
 	// set state for first level
 	W_StartLevel();
+	// start bg music
+	//Mix_PlayMusic( g_assets->mus, -1 );
 
 	// main loop 
 #ifdef __EMSCRIPTEN__
 	emscripten_set_main_loop_arg( emloop, renderer, 1000 / FRAME_DELAY, 1 );
+	//emscripten_set_main_loop_timing( EM_TIMING_RAF, 2 ); // vsync/2
 #else
 	while ( gs->quit == 0 ) {
 		// fixed timestep
@@ -235,6 +285,11 @@ int main( int argc, char** argv ) {
 		SDL_DestroyTexture( g_assets->tile_tx[i] );
 	free( g_assets );
 	free( gs );
+	// free audio
+	//for ( int i = 0; i < sizeof(g_assets->sfx) / sizeof(g_assets->sfx[0]) )
+		//Mix_FreeChunk( g_assets->sfx[i] );
+	//Mix_FreeMusic( g_assets->mus );
+	//Mix_CloseAudio();
 
 	// cleanup SDL
 	SDL_DestroyRenderer( renderer );
@@ -248,3 +303,4 @@ int main( int argc, char** argv ) {
 
 	return EXIT_SUCCESS;
 }
+

@@ -2,6 +2,7 @@
 #define _LMDAVE_H
 
 #include <SDL.h>
+//#include <SDL/SDL_mixer.h>
 
 // for dealing with resources in EXE
 #include "util/util.h"
@@ -19,6 +20,10 @@ typedef struct {
 	// player state
 	player_state_t ps;
 
+	// enemy bullet
+	uint16_t ebullet_px, ebullet_py;
+	int8_t ebullet_dir;
+
 	level_t levels[NUM_EXE_LEVELS]; // copied from exe util's GetLevel
 } game_state_t;
 
@@ -26,6 +31,10 @@ typedef struct {
 typedef struct {
 	// tiles as textures converted from util's tile surfaces
 	SDL_Texture* tile_tx[NUM_EXE_TILES];
+	// sfx
+	//Mix_Chunk* sfx[2];
+	// music
+	//Mix_Music* mus;
 } game_assets_t;
 
 // level tile size in pixels

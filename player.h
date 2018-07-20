@@ -10,6 +10,8 @@ typedef struct {
 	uint8_t lives;
 	// on ground flag
 	uint8_t on_ground;
+	// last facing direction
+	int8_t last_dir;
 
 	// input flags
 	uint8_t try_right;
@@ -34,6 +36,9 @@ typedef struct {
 	uint8_t check_door;
 	// item flags; jetpack is also fuel count
 	uint8_t trophy, gun, jetpack;
+	// bullet
+	uint16_t bullet_px, bullet_py;
+	int8_t bullet_dir;
 
 	// collision point clear flags; 1 = clear
 	uint8_t col_point[8];
@@ -42,6 +47,7 @@ typedef struct {
 void P_Spawn();
 void P_PickupItem();
 void P_UpdateCollision();
+void P_UpdateBullet();
 void P_VerifyInput();
 void P_Move();
 void P_ApplyGravity();

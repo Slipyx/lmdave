@@ -8,6 +8,10 @@ extern game_state_t* gs;
 void W_StartLevel() {
 	P_Spawn();
 
+	// reset monster bullet
+	gs->ebullet_px = 0;
+	gs->ebullet_py = 0;
+
 	// reset items
 	gs->ps.gun = 0;
 	gs->ps.jetpack = 0;
@@ -21,8 +25,8 @@ void W_ResetLevel() {
 	W_StartLevel();
 }
 
-// returns 1 if passed pixel point is not within a solid tile
-uint8_t W_IsClear( uint16_t px, uint16_t py ) {
+// returns 1 if passed pixel point is not within a solid tile, is_player non zero to execute functionality
+uint8_t W_IsClear( uint16_t px, uint16_t py, uint8_t is_player ) {
 	uint8_t tx, ty; // tile pos
 	uint8_t til; // tile index
 
@@ -37,20 +41,23 @@ uint8_t W_IsClear( uint16_t px, uint16_t py ) {
 	if ( til >= 21 && til <= 24 ) return 0;
 	if ( til >= 29 && til <= 30 ) return 0;
 
-	// kill tiles
-	if ( til == 6 || til == 25 || til == 36 ) {
-		P_Spawn();
-	}
+	// player collision functionality
+	if ( is_player ) {
+		// kill tiles
+		if ( til == 6 || til == 25 || til == 36 ) {
+			P_Spawn();
+		}
 
-	// pickups
-	if ( til == 10 || til == 4 || til == 20 || (til >= 47 && til <= 52) ) {
-		gs->ps.check_pickup_x = tx;
-		gs->ps.check_pickup_y = ty;
-	}
+		// pickups
+		if ( til == 10 || til == 4 || til == 20 || (til >= 47 && til <= 52) ) {
+			gs->ps.check_pickup_x = tx;
+			gs->ps.check_pickup_y = ty;
+		}
 
-	// door
-	if ( til == 2 ) {
-		gs->ps.check_door = 1;
+		// door
+		if ( til == 2 ) {
+			gs->ps.check_door = 1;
+		}
 	}
 
 	return 1;

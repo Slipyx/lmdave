@@ -1,7 +1,12 @@
 #include "game.h"
 #include "world.h"
 
+// sound channels
+#define S_CHAN_JUMP 0
+#define S_CHAN_PICKUP 1
+
 extern game_state_t* gs;
+extern game_assets_t* g_assets;
 
 // sets player position to current level's player start
 void P_Spawn() {
@@ -14,6 +19,13 @@ void P_Spawn() {
 	gs->ps.jump_timer = 0;
 	gs->ps.on_ground = 0;
 	gs->ps.do_jump = 0;
+	// reset direction and bullet
+	gs->ps.last_dir = 0;
+	gs->ps.bullet_px = 0;
+	gs->ps.bullet_py = 0;
+	gs->ps.do_fire = 0;
+	gs->ps.do_jetpack = 0;
+	gs->ps.do_up = 0; gs->ps.do_down = 0;
 
 	// hardcoded player starts
 	switch ( gs->current_level ) {
@@ -51,25 +63,44 @@ void P_PickupItem() {
 	gs->levels[gs->current_level].tiles[ty * 100 + tx] = 0;
 	gs->ps.check_pickup_x = 0;
 	gs->ps.check_pickup_y = 0;
+	// sfx
+	//Mix_PlayChannel( S_CHAN_PICKUP, g_assets->sfx[1], 0 );
 }
 
 // update collision point clear flags
 void P_UpdateCollision() {
 	// 8 points of collision; relative to top left of tile 56 neutral frame (20x16)
 	// 0, 1 = top left, top right
-	gs->ps.col_point[0] = W_IsClear( gs->ps.px + 4, gs->ps.py - 0 );
-	gs->ps.col_point[1] = W_IsClear( gs->ps.px + 10, gs->ps.py - 0 );
+	gs->ps.col_point[0] = W_IsClear( gs->ps.px + 4, gs->ps.py - 0, 1 );
+	gs->ps.col_point[1] = W_IsClear( gs->ps.px + 10, gs->ps.py - 0, 1 );
 	// 2, 3 = right edge
-	gs->ps.col_point[2] = W_IsClear( gs->ps.px + 12, gs->ps.py + 2 );
-	gs->ps.col_point[3] = W_IsClear( gs->ps.px + 12, gs->ps.py + 14 );
+	gs->ps.col_point[2] = W_IsClear( gs->ps.px + 12, gs->ps.py + 2, 1 );
+	gs->ps.col_point[3] = W_IsClear( gs->ps.px + 12, gs->ps.py + 14, 1 );
 	// 4, 5 = bottom edge
-	gs->ps.col_point[4] = W_IsClear( gs->ps.px + 10, gs->ps.py + 16 );
-	gs->ps.col_point[5] = W_IsClear( gs->ps.px + 4, gs->ps.py + 16 );
+	gs->ps.col_point[4] = W_IsClear( gs->ps.px + 10, gs->ps.py + 16, 1 );
+	gs->ps.col_point[5] = W_IsClear( gs->ps.px + 4, gs->ps.py + 16, 1 );
 	// 6, 7 = left edge
-	gs->ps.col_point[6] = W_IsClear( gs->ps.px + 2, gs->ps.py + 14 );
-	gs->ps.col_point[7] = W_IsClear( gs->ps.px + 2, gs->ps.py + 2 );
+	gs->ps.col_point[6] = W_IsClear( gs->ps.px + 2, gs->ps.py + 14, 1 );
+	gs->ps.col_point[7] = W_IsClear( gs->ps.px + 2, gs->ps.py + 2, 1 );
 	// update on_ground flag if a bottom point (4,5) is not clear
 	gs->ps.on_ground = (!gs->ps.col_point[4] || !gs->ps.col_point[5]);
+}
+
+// update bullet state
+void P_UpdateBullet() {
+	// skip if no bullet in world
+	if ( !gs->ps.bullet_px || !gs->ps.bullet_py ) return;
+
+	gs->ps.bullet_px += gs->ps.bullet_dir * 4;
+
+	// collision
+	if ( !W_IsClear( gs->ps.bullet_px, gs->ps.bullet_py, 0 ) )
+		gs->ps.bullet_px = gs->ps.bullet_py = 0;
+
+	// off-screen
+	uint8_t tx = gs->ps.bullet_px / TILE_SIZE;
+	if ( tx - gs->view_x < 0 || tx - gs->view_x > 20 )
+		gs->ps.bullet_px = gs->ps.bullet_py = 0;
 }
 
 // validate input whose try flags were set
@@ -83,13 +114,33 @@ void P_VerifyInput() {
 		gs->ps.do_left = 1;
 	}
 	// jump; on_ground and col points 0, 1
-	if ( gs->ps.try_jump && gs->ps.on_ground && !gs->ps.do_jump
+	if ( gs->ps.try_jump && gs->ps.on_ground && !gs->ps.do_jump && !gs->ps.do_jetpack
 		 && (gs->ps.col_point[0] && gs->ps.col_point[1]) ) {
 		gs->ps.do_jump = 1;
 	}
 	// reset jump timer if contact a ground while still "jumping"
 	if ( gs->ps.try_jump && gs->ps.on_ground && gs->ps.jump_timer )
 		gs->ps.jump_timer = 0;
+	// fire if have gun and no bullet in world
+	if ( gs->ps.try_fire && gs->ps.gun && !gs->ps.bullet_px && !gs->ps.bullet_py ) {
+		gs->ps.do_fire = 1;
+	}
+	// jetpack toggle
+	if ( gs->ps.try_jetpack && gs->ps.jetpack ) {
+		gs->ps.do_jetpack = !gs->ps.do_jetpack;
+		// stop jump
+		if ( gs->ps.do_jetpack ) {
+			gs->ps.do_jump = 0; gs->ps.jump_timer = 0;
+		}
+	}
+	// down if bottom is clear and jetpack
+	if ( gs->ps.try_down && gs->ps.do_jetpack && gs->ps.col_point[4] && gs->ps.col_point[5] ) {
+		gs->ps.do_down = 1;
+	}
+	// up if top is clear and jetpack
+	if ( gs->ps.try_up && gs->ps.do_jetpack && gs->ps.col_point[0] && gs->ps.col_point[1] ) {
+		gs->ps.do_up = 1;
+	}
 }
 
 // apply validated player movement
@@ -101,15 +152,28 @@ void P_Move() {
 
 	if ( gs->ps.do_right ) {
 		gs->ps.px += 2;
+		gs->ps.last_dir = 1;
 		gs->ps.do_right = 0;
 	}
 	if ( gs->ps.do_left ) {
 		gs->ps.px -= 2;
+		gs->ps.last_dir = -1;
 		gs->ps.do_left = 0;
 	}
-	if ( gs->ps.do_jump ) {
-		if ( !gs->ps.jump_timer )
+	// up and down
+	if ( gs->ps.do_up ) {
+		gs->ps.py -= 2;
+		gs->ps.do_up = 0;
+	} else if ( gs->ps.do_down ) {
+		gs->ps.py += 2;
+		gs->ps.do_down = 0;
+	// jump
+	} else if ( gs->ps.do_jump ) {
+		if ( !gs->ps.jump_timer ) {
 			gs->ps.jump_timer = 25;
+			//gs->ps.last_dir = 0;
+			//Mix_PlayChannel( S_CHAN_JUMP, g_assets->sfx[0], 0 );
+		}
 
 		if ( gs->ps.col_point[0] && gs->ps.col_point[1] ) {
 			if ( gs->ps.jump_timer > 12 )
@@ -124,13 +188,27 @@ void P_Move() {
 		if ( !gs->ps.jump_timer )
 			gs->ps.do_jump = 0;
 	}
+	// fire
+	if ( gs->ps.do_fire ) {
+		gs->ps.bullet_dir = gs->ps.last_dir;
+		// default right
+		if ( !gs->ps.bullet_dir ) gs->ps.bullet_dir = 1;
+		// start bullet in "front" of player
+		if ( gs->ps.bullet_dir == 1 )
+			gs->ps.bullet_px = gs->ps.px + 18;
+		if ( gs->ps.bullet_dir == -1 )
+			gs->ps.bullet_px = gs->ps.px - 8;
+		// halfway down player
+		gs->ps.bullet_py = gs->ps.py + 8;
+		gs->ps.do_fire = 0;
+	}
 }
 
 // apply gravity to player
 void P_ApplyGravity() {
-	if ( !gs->ps.do_jump && !gs->ps.on_ground ) {
+	if ( !gs->ps.do_jump && !gs->ps.on_ground && !gs->ps.do_jetpack ) {
 		// check below sprite
-		if ( W_IsClear( gs->ps.px + 4, gs->ps.py + 17 ) && W_IsClear( gs->ps.px + 10, gs->ps.py + 17 ) )
+		if ( W_IsClear( gs->ps.px + 4, gs->ps.py + 17, 0 ) && W_IsClear( gs->ps.px + 10, gs->ps.py + 17, 0 ) )
 			gs->ps.py += 2;
 		else { // align to tile
 			uint8_t not_align = gs->ps.py % TILE_SIZE;
