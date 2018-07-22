@@ -5,7 +5,7 @@
 // player state
 typedef struct {
 	uint8_t tx, ty; // tile pos
-	uint16_t px, py; // pixel pos
+	int16_t px, py; // pixel pos
 	uint16_t score;
 	uint8_t lives;
 	// on ground flag

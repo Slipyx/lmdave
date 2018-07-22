@@ -129,9 +129,9 @@ void Draw_World( SDL_Renderer* r ) {
 	SDL_Rect dst = {0,0,320,200};
 	// solid BG fill
 	SDL_RenderCopy( r, g_assets->tile_tx[0], NULL, &dst );
-	// draw level view 20x10 tiles at 16x16px
+	// draw level view 20x10 tiles at 16x16px offset one tile in y
 	for ( int j = 0; j < 10; ++j ) {
-		dst.y = j * TILE_SIZE;
+		dst.y = TILE_SIZE + j * TILE_SIZE;
 		dst.w = TILE_SIZE; dst.h = TILE_SIZE;
 		for ( int i = 0; i < 20; ++i ) {
 			dst.x = i * TILE_SIZE;
@@ -147,7 +147,7 @@ void Draw_Player( SDL_Renderer* r ) {
 	SDL_Rect dst;
 	// relative to view
 	dst.x = gs->ps.px - gs->view_x * TILE_SIZE;
-	dst.y = gs->ps.py;
+	dst.y = TILE_SIZE + gs->ps.py;
 	// tile 56 neutral, 53 right, 57 left 20x16px
 	uint8_t til = 56;
 	dst.w = 20; dst.h = 16;
@@ -178,7 +178,7 @@ void Draw_Bullet( SDL_Renderer* r ) {
 	if ( gs->ps.bullet_px && gs->ps.bullet_py ) {
 		// relative to view
 		dst.x = gs->ps.bullet_px - gs->view_x * TILE_SIZE;
-		dst.y = gs->ps.bullet_py;
+		dst.y = TILE_SIZE + gs->ps.bullet_py;
 		// tile 127 right, 128 left
 		uint8_t til = gs->ps.bullet_dir > 0 ? 127 : 128;
 		dst.w = 12; dst.h = 3;

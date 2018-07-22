@@ -26,9 +26,12 @@ void W_ResetLevel() {
 }
 
 // returns 1 if passed pixel point is not within a solid tile, is_player non zero to execute functionality
-uint8_t W_IsClear( uint16_t px, uint16_t py, uint8_t is_player ) {
+uint8_t W_IsClear( int16_t px, int16_t py, uint8_t is_player ) {
 	uint8_t tx, ty; // tile pos
 	uint8_t til; // tile index
+
+	// off top and bottom
+	if ( py < 0 || py >= 10 * TILE_SIZE ) return 1;
 
 	// pixel point to tile pos
 	tx = px / TILE_SIZE; ty = py / TILE_SIZE;
@@ -43,19 +46,35 @@ uint8_t W_IsClear( uint16_t px, uint16_t py, uint8_t is_player ) {
 
 	// player collision functionality
 	if ( is_player ) {
-		// kill tiles
+		// adjusted tile collision
+		SDL_Rect colbox;
+		colbox.x = (tx - gs->view_x) * TILE_SIZE + 2;
+		colbox.y = ty * TILE_SIZE + 2;
+		colbox.w = TILE_SIZE-4; colbox.h = TILE_SIZE-4;
+		SDL_Point colpt;
+		colpt.x = px - gs->view_x * TILE_SIZE;
+		colpt.y = py;
+		// hazard tiles
 		if ( til == 6 || til == 25 || til == 36 ) {
-			P_Spawn();
+			if ( SDL_PointInRect( &colpt, &colbox ) ) {
+				//return 0;
+				P_Spawn();
+			}
 		}
 
 		// pickups
-		if ( til == 10 || til == 4 || til == 20 || (til >= 47 && til <= 52) ) {
-			gs->ps.check_pickup_x = tx;
-			gs->ps.check_pickup_y = ty;
+		else if ( til == 10 || til == 4 || til == 20 || (til >= 47 && til <= 52) ) {
+			// taller box
+			colbox.x -= 0; colbox.y -= 2;
+			colbox.w += 0; colbox.h += 4;
+			if ( SDL_PointInRect( &colpt, &colbox ) ) {
+				gs->ps.check_pickup_x = tx;
+				gs->ps.check_pickup_y = ty;
+			}
 		}
 
 		// door
-		if ( til == 2 ) {
+		else if ( til == 2 ) {
 			gs->ps.check_door = 1;
 		}
 	}

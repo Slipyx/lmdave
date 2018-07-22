@@ -47,7 +47,7 @@ void P_PickupItem() {
 	uint8_t tx = gs->ps.check_pickup_x;
 	uint8_t ty = gs->ps.check_pickup_y;
 
-	if ( !tx || !ty ) return;
+	if ( !tx && !ty ) return;
 
 	uint8_t til = gs->levels[gs->current_level].tiles[ty * 100 + tx];
 
@@ -149,6 +149,8 @@ void P_Move() {
 	// sample x towards the center
 	gs->ps.tx = (gs->ps.px + TILE_SIZE / 2) / TILE_SIZE;
 	gs->ps.ty = gs->ps.py / TILE_SIZE;
+	// wrap to top if off level bottom
+	if ( gs->ps.py >= 10 * TILE_SIZE ) { gs->ps.ty = 0; gs->ps.py = -TILE_SIZE * 2; }
 
 	if ( gs->ps.do_right ) {
 		gs->ps.px += 2;
