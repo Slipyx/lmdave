@@ -8,6 +8,7 @@
 #include "util/util.h"
 
 #include "player.h"
+#include "monster.h"
 
 // global game state
 typedef struct {
@@ -19,10 +20,12 @@ typedef struct {
 
 	// player state
 	player_state_t ps;
+	// max 5 monster states
+	monster_state_t ms[5];
 
-	// enemy bullet
-	uint16_t ebullet_px, ebullet_py;
-	int8_t ebullet_dir;
+	// a single monster bullet
+	uint16_t mbullet_px, mbullet_py;
+	int8_t mbullet_dir;
 
 	level_t levels[NUM_EXE_LEVELS]; // copied from exe util's GetLevel
 } game_state_t;

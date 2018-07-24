@@ -9,8 +9,21 @@ void W_StartLevel() {
 	P_Spawn();
 
 	// reset monster bullet
-	gs->ebullet_px = 0;
-	gs->ebullet_py = 0;
+	gs->mbullet_px = 0;
+	gs->mbullet_py = 0;
+	memset( gs->ms, 0, sizeof(gs->ms) );
+
+	// set hardcoded monster type based on level
+	switch ( gs->current_level ) {
+	case 2: { // level 3, two spiders
+		gs->ms[0].type = 89;
+		gs->ms[0].px = 44 * TILE_SIZE;
+		gs->ms[0].py = 4 * TILE_SIZE;
+		gs->ms[1].type = 89;
+		gs->ms[1].px = 59 * TILE_SIZE;
+		gs->ms[1].py = 4 * TILE_SIZE;
+	} break;
+	}
 
 	// reset items
 	gs->ps.gun = 0;
@@ -80,6 +93,11 @@ uint8_t W_IsClear( int16_t px, int16_t py, uint8_t is_player ) {
 	}
 
 	return 1;
+}
+
+uint8_t W_IsVisible( int16_t px ) {
+	int tx = px / TILE_SIZE;
+	return (tx - gs->view_x < 20 && tx - gs->view_x >= 0);
 }
 
 // level-wide state update

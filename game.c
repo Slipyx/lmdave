@@ -13,6 +13,8 @@ static void G_Init() {
 
 	// clean player state
 	memset( &gs->ps, 0, sizeof(player_state_t) );
+	// clean monster states
+	memset( gs->ms, 0, sizeof(gs->ms) );
 }
 
 // initialize game assets
@@ -110,10 +112,16 @@ static void G_Update() {
 	P_PickupItem();
 	// player bullet
 	P_UpdateBullet();
+	// monster bullet
+	M_UpdateBullet();
 	// verify input try flags
 	P_VerifyInput();
 	// apply player movement
 	P_Move();
+	// monster movement
+	M_Move();
+	// monser shooting
+	M_Fire();
 	// game view scrolling
 	W_ScrollView();
 	// player gravity
@@ -139,6 +147,38 @@ void Draw_World( SDL_Renderer* r ) {
 			if ( til == 0 ) continue;
 			SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
 		}
+	}
+}
+
+// draw monsters
+void Draw_Monsters( SDL_Renderer* r ) {
+	SDL_Rect dst;
+	uint8_t til = 0;
+
+	for ( int i = 0; i < sizeof(gs->ms) / sizeof(gs->ms[0]); ++i ) {
+		monster_state_t* m = &gs->ms[i];
+		if ( m->type ) {
+			dst.x = m->px - gs->view_x * TILE_SIZE;
+			dst.y = TILE_SIZE + m->py;
+			dst.w = 20; dst.h = 16;
+			til = m->type;
+			SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
+		}
+	}
+}
+// monster bullets
+void Draw_MonsterBullet( SDL_Renderer* r ) {
+	SDL_Rect dst;
+	if ( gs->mbullet_px && gs->mbullet_py ) {
+		// relative to view
+		dst.x = gs->mbullet_px - gs->view_x * TILE_SIZE;
+		dst.y = TILE_SIZE + gs->mbullet_py;
+		// tile 127 right, 128 left
+		uint8_t til = gs->mbullet_dir > 0 ? 121 : 124;
+		dst.w = 12; dst.h = 3;
+
+		// render
+		SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
 	}
 }
 
@@ -196,7 +236,9 @@ static void G_Draw( SDL_Renderer* r ) {
 
 	Draw_World( r );
 	Draw_Player( r );
+	Draw_Monsters( r );
 	Draw_Bullet( r );
+	Draw_MonsterBullet( r );
 
 	// flip buffers
 	SDL_RenderPresent( r );
@@ -254,7 +296,7 @@ int main( int argc, char** argv ) {
 	G_InitAssets( renderer );
 
 	// clear initial frame
-	SDL_SetRenderDrawColor( renderer, 0, 40, 80, 0xff );
+	SDL_SetRenderDrawColor( renderer, 0, 80, 80, 0xff );
 	SDL_RenderClear( renderer );
 
 	// set state for first level
