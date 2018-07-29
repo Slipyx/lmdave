@@ -19,10 +19,10 @@ void M_Move() {
 				m->path_index = 2;
 			}
 			// move
-			if ( m->npx < 0 ) { m->px -= 1; m->npx++; }
-			if ( m->npx > 0 ) { m->px += 1; m->npx--; }
-			if ( m->npy < 0 ) { m->py -= 1; m->npy++; }
-			if ( m->npy > 0 ) { m->py += 1; m->npy--; }
+			if ( m->npx < 0 ) { m->px -= 1; m->npx += 1; }
+			if ( m->npx > 0 ) { m->px += 1; m->npx -= 1; }
+			if ( m->npy < 0 ) { m->py -= 1; m->npy += 1; }
+			if ( m->npy > 0 ) { m->py += 1; m->npy -= 1; }
 			// update tile pos
 			m->tx = m->px / TILE_SIZE;
 			m->ty = m->py / TILE_SIZE;
@@ -34,13 +34,13 @@ void M_Fire() {
 	if ( !gs->mbullet_px && !gs->mbullet_py ) {
 		for ( int i = 0; i < sizeof(gs->ms) / sizeof(gs->ms[0]); ++i ) {
 			monster_state_t* m = &gs->ms[i];
-			if ( m->type && W_IsVisible( m->px ) ) {
+			if ( m->type && W_IsVisible( m->px ) && W_IsClear( m->px, m->py, 0 ) ) {
 				gs->mbullet_dir = gs->ps.px < m->px ? -1 : 1;
 				if ( gs->mbullet_dir == 1 )
-					gs->mbullet_px = m->px + 18;
+					gs->mbullet_px = m->px;
 				if ( gs->mbullet_dir == -1 )
-					gs->mbullet_px = m->px - 8;
-				gs->mbullet_py = m->py + 8;
+					gs->mbullet_px = m->px - 20;
+				gs->mbullet_py = m->py;// + 8;
 			}
 		}
 	}
