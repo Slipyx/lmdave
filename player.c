@@ -26,6 +26,7 @@ void P_Spawn() {
 	gs->ps.do_fire = 0;
 	gs->ps.do_jetpack = 0;
 	gs->ps.do_up = 0; gs->ps.do_down = 0;
+	gs->ps.dead_timer = 0;
 
 	// hardcoded player starts
 	switch ( gs->current_level ) {
@@ -69,6 +70,7 @@ void P_PickupItem() {
 
 // update collision point clear flags
 void P_UpdateCollision() {
+	if ( gs->ps.dead_timer ) return;
 	// 8 points of collision; relative to top left of tile 56 neutral frame (20x16)
 	// 0, 1 = top left, top right
 	gs->ps.col_point[0] = W_IsClear( gs->ps.px + 4, gs->ps.py - 0, 1 );
@@ -91,20 +93,35 @@ void P_UpdateBullet() {
 	// skip if no bullet in world
 	if ( !gs->ps.bullet_px || !gs->ps.bullet_py ) return;
 
-	gs->ps.bullet_px += gs->ps.bullet_dir * 4;
-
 	// collision
 	if ( !W_IsClear( gs->ps.bullet_px, gs->ps.bullet_py, 0 ) )
 		gs->ps.bullet_px = gs->ps.bullet_py = 0;
 
 	// off-screen
 	uint8_t tx = gs->ps.bullet_px / TILE_SIZE;
+	uint8_t ty = gs->ps.bullet_py / TILE_SIZE;
 	if ( tx - gs->view_x < 0 || tx - gs->view_x > 20 )
 		gs->ps.bullet_px = gs->ps.bullet_py = 0;
+
+	if ( gs->ps.bullet_px ) {
+		gs->ps.bullet_px += gs->ps.bullet_dir * 4;
+
+		for ( int i = 0; i < sizeof(gs->ms) / sizeof(gs->ms[0]); ++i ) {
+			monster_state_t* m = &gs->ms[i];
+			if ( m->type && !m->dead_timer ) {
+				if ( (ty == m->ty || ty == m->ty + 1) && (tx == m->tx || tx == m->tx + 1) ) {
+					gs->ps.bullet_px = gs->ps.bullet_py = 0;
+					m->dead_timer = 30;
+				}
+			}
+		}
+	}
 }
 
 // validate input whose try flags were set
 void P_VerifyInput() {
+	// no input when dead
+	if ( gs->ps.dead_timer ) return;
 	// right; col points 2, 3
 	if ( gs->ps.try_right && gs->ps.col_point[2] && gs->ps.col_point[3] ) {
 		gs->ps.do_right = 1;
@@ -145,6 +162,7 @@ void P_VerifyInput() {
 
 // apply validated player movement
 void P_Move() {
+	if ( gs->ps.dead_timer ) return;
 	// update player's tile pos
 	// sample x towards the center
 	gs->ps.tx = (gs->ps.px + TILE_SIZE / 2) / TILE_SIZE;
@@ -208,6 +226,7 @@ void P_Move() {
 
 // apply gravity to player
 void P_ApplyGravity() {
+	if ( gs->ps.dead_timer ) return;
 	if ( !gs->ps.do_jump && !gs->ps.on_ground && !gs->ps.do_jetpack ) {
 		// check below sprite
 		if ( W_IsClear( gs->ps.px + 4, gs->ps.py + 17, 0 ) && W_IsClear( gs->ps.px + 10, gs->ps.py + 17, 0 ) )
@@ -221,3 +240,4 @@ void P_ApplyGravity() {
 		}
 	}
 }
+

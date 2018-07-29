@@ -29,6 +29,7 @@ typedef struct {
 	uint8_t do_up, do_down;
 
 	uint8_t jump_timer;
+	uint8_t dead_timer;
 	// pickup tile pos
 	uint8_t check_pickup_x;
 	uint8_t check_pickup_y;

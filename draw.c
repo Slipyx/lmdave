@@ -40,7 +40,9 @@ void Draw_Player( SDL_Renderer* r ) {
 	}
 	// jump tile
 	else if ( gs->ps.do_jump || !gs->ps.on_ground )
-	til = gs->ps.last_dir >= 0 ? 67 : 68;
+		til = gs->ps.last_dir >= 0 ? 67 : 68;
+	// dead
+	if ( gs->ps.dead_timer ) til = 129;
 
 	// render
 	// grounded debug
@@ -75,10 +77,10 @@ void Draw_Monsters( SDL_Renderer* r ) {
 	for ( int i = 0; i < sizeof(gs->ms) / sizeof(gs->ms[0]); ++i ) {
 		monster_state_t* m = &gs->ms[i];
 		if ( m->type ) {
-			dst.x = m->px - gs->view_x * TILE_SIZE - 12;
-			dst.y = TILE_SIZE + m->py - 10;
+			dst.x = m->px - gs->view_x * TILE_SIZE;// - 12;
+			dst.y = TILE_SIZE + m->py;// - 10;
 			dst.w = 24; dst.h = 20;
-			til = m->type;
+			til = m->dead_timer ? 129 : m->type;
 			SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
 		}
 	}

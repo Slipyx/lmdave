@@ -23,6 +23,11 @@ void W_StartLevel() {
 		gs->ms[1].px = 59 * TILE_SIZE;
 		gs->ms[1].py = 4 * TILE_SIZE;
 	} break;
+	case 3: { // level 4, one monster
+		gs->ms[0].type = 93;
+		gs->ms[0].px = 32 * TILE_SIZE;
+		gs->ms[0].py = 2 * TILE_SIZE;
+	} break;
 	}
 
 	// reset items
@@ -35,6 +40,7 @@ void W_StartLevel() {
 // hard reset current level from original data
 void W_ResetLevel() {
 	Util_GetLevel( gs->current_level, &gs->levels[gs->current_level] );
+	gs->ps.lives = 255;
 	W_StartLevel();
 }
 
@@ -58,7 +64,7 @@ uint8_t W_IsClear( int16_t px, int16_t py, uint8_t is_player ) {
 	if ( til >= 29 && til <= 30 ) return 0;
 
 	// player collision functionality
-	if ( is_player ) {
+	if ( is_player && !gs->ps.dead_timer ) {
 		// adjusted tile collision
 		SDL_Rect colbox;
 		colbox.x = (tx - gs->view_x) * TILE_SIZE + 2;
@@ -71,7 +77,8 @@ uint8_t W_IsClear( int16_t px, int16_t py, uint8_t is_player ) {
 		if ( til == 6 || til == 25 || til == 36 ) {
 			if ( SDL_PointInRect( &colpt, &colbox ) ) {
 				//return 0;
-				P_Spawn();
+				//P_Spawn();
+				gs->ps.dead_timer = 30;
 			}
 		}
 
@@ -114,6 +121,31 @@ void W_Update() {
 			}
 		} else { // no trophy
 			gs->ps.check_door = 0;
+		}
+	}
+	// update dead timers
+	if ( gs->ps.dead_timer ) {
+		gs->ps.dead_timer--;
+		if ( !gs->ps.dead_timer ) {
+			if ( gs->ps.lives ) {
+				gs->ps.lives--;
+				P_Spawn();
+			} else gs->quit = 1;
+		}
+	}
+	// monsters
+	for ( int i = 0; i < sizeof(gs->ms) / sizeof(gs->ms[0]); ++i ) {
+		monster_state_t* m = &gs->ms[i];
+		if ( m->type ) {
+			if ( m->dead_timer ) {
+				m->dead_timer--;
+				if ( !m->dead_timer ) { m->type = 0; }
+			} else { // player and monster collision
+				if ( m->tx == gs->ps.tx && m->ty == gs->ps.ty ) {
+					m->dead_timer = 30;
+					gs->ps.dead_timer = 30;
+				}
+			}
 		}
 	}
 }

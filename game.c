@@ -14,6 +14,8 @@ static void G_Init() {
 
 	// clean player state
 	memset( &gs->ps, 0, sizeof(player_state_t) );
+	// 3 lives per game
+	gs->ps.lives = 255;
 	// clean monster states
 	memset( gs->ms, 0, sizeof(gs->ms) );
 }
