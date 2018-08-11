@@ -35,13 +35,14 @@ void M_Fire() {
 		for ( int i = 0; i < sizeof(gs->ms) / sizeof(gs->ms[0]); ++i ) {
 			monster_state_t* m = &gs->ms[i];
 			// assumed size of 24x20
-			if ( m->type && !m->dead_timer && W_IsVisible( m->px ) && W_IsClear( m->px+12, m->py+10, 0 ) ) {
+			if ( m->type && !m->dead_timer && W_IsVisible( m->px ) && W_IsClear( m->px+12, m->py+10, 0 ) && !m->fire_timer ) {
 				gs->mbullet_dir = gs->ps.px < m->px ? -1 : 1;
 				if ( gs->mbullet_dir == 1 )
 					gs->mbullet_px = m->px + 18;
 				if ( gs->mbullet_dir == -1 )
 					gs->mbullet_px = m->px - 10;
 				gs->mbullet_py = m->py + 10;
+				m->fire_timer = 15;
 			}
 		}
 	}

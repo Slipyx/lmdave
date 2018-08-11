@@ -16,6 +16,7 @@ void Draw_World( SDL_Renderer* r ) {
 			dst.x = i * TILE_SIZE;
 			uint8_t til = gs->levels[gs->current_level].tiles[j * 100 + gs->view_x + i];
 			if ( til == 0 ) continue;
+			til = G_UpdateFrame( til, i );
 			SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
 		}
 	}
@@ -37,12 +38,13 @@ void Draw_Player( SDL_Renderer* r ) {
 	// grounded walk tile
 	else if ( gs->ps.on_ground ) {
 		til = gs->ps.last_dir >= 0 ? 53 : 57;
+		til += (gs->ps.tick/4) % 3;
 	}
 	// jump tile
 	else if ( gs->ps.do_jump || !gs->ps.on_ground )
 		til = gs->ps.last_dir >= 0 ? 67 : 68;
 	// dead
-	if ( gs->ps.dead_timer ) til = 129;
+	if ( gs->ps.dead_timer ) til = 129 + (gs->tick/4) % 4;
 
 	// render
 	// grounded debug
@@ -51,6 +53,10 @@ void Draw_Player( SDL_Renderer* r ) {
 		SDL_RenderDrawLine( r, dst.x, dst.y+dst.h, dst.x+dst.w, dst.y+dst.h );
 	}
 	SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
+	/*dst.w = TILE_SIZE; dst.h = TILE_SIZE;
+	dst.x = (gs->ps.tx - gs->view_x) * TILE_SIZE;
+	dst.y = gs->ps.ty * TILE_SIZE + TILE_SIZE;
+	SDL_RenderDrawRect( r, &dst );*/
 }
 
 // draw player bullet
@@ -66,6 +72,11 @@ void Draw_Bullet( SDL_Renderer* r ) {
 
 		// render
 		SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
+		/*SDL_SetRenderDrawColor( r, 255, 0, 255, 255 );
+		dst.w = TILE_SIZE; dst.h = TILE_SIZE;
+		dst.x = ((gs->ps.bullet_px / TILE_SIZE) - gs->view_x) * TILE_SIZE;
+		dst.y = (gs->ps.bullet_py / TILE_SIZE) * TILE_SIZE + TILE_SIZE;
+		SDL_RenderDrawRect( r, &dst );*/
 	}
 }
 
@@ -81,6 +92,7 @@ void Draw_Monsters( SDL_Renderer* r ) {
 			dst.y = TILE_SIZE + m->py;// - 10;
 			dst.w = 24; dst.h = 20;
 			til = m->dead_timer ? 129 : m->type;
+			til += (gs->tick / 3) % 4;
 			SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
 		}
 	}
@@ -94,10 +106,16 @@ void Draw_MonsterBullet( SDL_Renderer* r ) {
 		dst.y = TILE_SIZE + gs->mbullet_py;
 		// tile 127 right, 128 left
 		uint8_t til = gs->mbullet_dir > 0 ? 121 : 124;
+		til += (gs->tick / 3) % 3;
 		dst.w = 20; dst.h = 3;
 
 		// render
 		SDL_RenderCopy( r, g_assets->tile_tx[til], NULL, &dst );
+		/*SDL_SetRenderDrawColor( r, 255, 0, 255, 255 );
+		dst.w = TILE_SIZE; dst.h = TILE_SIZE;
+		dst.x = ((gs->mbullet_px / TILE_SIZE) - gs->view_x) * TILE_SIZE;
+		dst.y = (gs->mbullet_py / TILE_SIZE) * TILE_SIZE + TILE_SIZE;
+		SDL_RenderDrawRect( r, &dst );*/
 	}
 }
 

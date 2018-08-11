@@ -65,7 +65,7 @@ void P_PickupItem() {
 	gs->ps.check_pickup_x = 0;
 	gs->ps.check_pickup_y = 0;
 	// sfx
-	//Mix_PlayChannel( S_CHAN_PICKUP, g_assets->sfx[1], 0 );
+	//Mix_PlayChannel( S_CHAN_PICKUP, g_assets->sfx[SFX_PICKUP], 0 );
 }
 
 // update collision point clear flags
@@ -174,25 +174,29 @@ void P_Move() {
 		gs->ps.px += 2;
 		gs->ps.last_dir = 1;
 		gs->ps.do_right = 0;
+		gs->ps.tick++;
 	}
 	if ( gs->ps.do_left ) {
 		gs->ps.px -= 2;
 		gs->ps.last_dir = -1;
 		gs->ps.do_left = 0;
+		gs->ps.tick++;
 	}
 	// up and down
 	if ( gs->ps.do_up ) {
 		gs->ps.py -= 2;
 		gs->ps.do_up = 0;
+		gs->ps.tick++;
 	} else if ( gs->ps.do_down ) {
 		gs->ps.py += 2;
 		gs->ps.do_down = 0;
+		gs->ps.tick++;
 	// jump
 	} else if ( gs->ps.do_jump ) {
 		if ( !gs->ps.jump_timer ) {
 			gs->ps.jump_timer = 25;
 			//gs->ps.last_dir = 0;
-			//Mix_PlayChannel( S_CHAN_JUMP, g_assets->sfx[0], 0 );
+			//Mix_PlayChannel( S_CHAN_JUMP, g_assets->sfx[SFX_JUMP], 0 );
 		}
 
 		if ( gs->ps.col_point[0] && gs->ps.col_point[1] ) {

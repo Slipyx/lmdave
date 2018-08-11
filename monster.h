@@ -5,6 +5,7 @@
 typedef struct {
 	uint8_t type; // type and tile index
 	uint8_t dead_timer;
+	uint8_t fire_timer;
 	uint8_t path_index; // current point in path
 	uint8_t tx, ty; // tile pos
 	int16_t px, py; // pixel pos

@@ -12,6 +12,7 @@ typedef struct {
 	uint8_t on_ground;
 	// last facing direction
 	int8_t last_dir;
+	uint16_t tick;
 
 	// input flags
 	uint8_t try_right;

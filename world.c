@@ -109,6 +109,8 @@ uint8_t W_IsVisible( int16_t px ) {
 
 // level-wide state update
 void W_Update() {
+	// update world tick
+	gs->tick++;
 	// check if at door and has trophy
 	if ( gs->ps.check_door ) {
 		if ( gs->ps.trophy ) {
@@ -137,6 +139,7 @@ void W_Update() {
 	for ( int i = 0; i < sizeof(gs->ms) / sizeof(gs->ms[0]); ++i ) {
 		monster_state_t* m = &gs->ms[i];
 		if ( m->type ) {
+			if ( m->fire_timer ) m->fire_timer--;
 			if ( m->dead_timer ) {
 				m->dead_timer--;
 				if ( !m->dead_timer ) { m->type = 0; }

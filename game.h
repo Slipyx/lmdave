@@ -2,17 +2,18 @@
 #define _LMDAVE_H
 
 #include <SDL.h>
-//#include <SDL/SDL_mixer.h>
 
 // for dealing with resources in EXE
 #include "util/util.h"
 
+#include "sound.h"
 #include "player.h"
 #include "monster.h"
 
 // global game state
 typedef struct {
 	uint8_t quit;
+	uint16_t tick;
 	uint8_t current_level;
 	// view and scroll are per tile
 	uint8_t view_x, view_y;
@@ -35,7 +36,7 @@ typedef struct {
 	// tiles as textures converted from util's tile surfaces
 	SDL_Texture* tile_tx[NUM_EXE_TILES];
 	// sfx
-	//Mix_Chunk* sfx[2];
+	Mix_Chunk* sfx[NUM_SFX];
 	// music
 	//Mix_Music* mus;
 } game_assets_t;
@@ -45,4 +46,9 @@ typedef struct {
 // fixed frame delay
 #define FRAME_DELAY 33
 
+// common functions
+// update a tile index based on game tick for animation
+uint8_t G_UpdateFrame( uint8_t til, uint8_t salt );
+
 #endif
+

@@ -1,6 +1,7 @@
 #include "game.h"
 #include "world.h"
 #include "draw.h"
+#include "sound.h"
 
 // global game state
 game_state_t* gs = NULL;
@@ -50,8 +51,8 @@ static void G_InitAssets( SDL_Renderer* r ) {
 	Util_FreeTileSurfaces();
 
 	// sfx
-	//g_assets->sfx[0] = S_LoadChunk( "res/jumpd8.wav" ); //Mix_LoadWAV_RW( rw, 1 );
-	//g_assets->sfx[1] = S_LoadChunk( "res/pickupd8.wav" ); //Mix_LoadWAV_RW( rw, 1 );
+	//g_assets->sfx[SFX_JUMP] = S_LoadChunk( "res/jumpd8.wav" ); //Mix_LoadWAV_RW( rw, 1 );
+	//g_assets->sfx[SFX_PICKUP] = S_LoadChunk( "res/pickupd8.wav" ); //Mix_LoadWAV_RW( rw, 1 );
 }
 
 // poll input
@@ -134,6 +135,17 @@ static void G_Update() {
 	W_Update();
 	// reset input flags
 	G_ClearInput();
+}
+
+// update tile animation
+uint8_t G_UpdateFrame( uint8_t til, uint8_t salt ) {
+	uint8_t mod;
+	switch ( til ) {
+	case 6: case 25: case 129: mod = 4; break;
+	case 10: case 36: mod = 5; break;
+	default: mod = 1; break;
+	}
+	return til + (gs->tick/5+salt) % mod;
 }
 
 // main drawing routine
@@ -233,12 +245,12 @@ int main( int argc, char** argv ) {
 	// destroy each tile texture
 	for ( int i = 0; i < NUM_EXE_TILES; ++i )
 		SDL_DestroyTexture( g_assets->tile_tx[i] );
-	free( g_assets );
-	free( gs );
 	// free audio
-	//for ( int i = 0; i < sizeof(g_assets->sfx) / sizeof(g_assets->sfx[0]) )
+	//for ( int i = 0; i < NUM_SFX; ++i )
 		//Mix_FreeChunk( g_assets->sfx[i] );
 	//Mix_FreeMusic( g_assets->mus );
+	free( g_assets );
+	free( gs );
 	//Mix_CloseAudio();
 
 	// cleanup SDL
